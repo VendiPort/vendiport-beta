@@ -63,6 +63,8 @@ async function init() {
   startJobsPoll();
   const arm = qs('#sale-sound-arm');
   if (arm) arm.addEventListener('click', armSaleSound);
+  const nArm = qs('#sale-notify-arm');
+  if (nArm) nArm.addEventListener('click', armSaleNotifications);
   const dismiss = qs('#sale-alert-dismiss');
   if (dismiss) dismiss.addEventListener('click', () => {
     document.querySelectorAll('.shop-job.PAID').forEach((el) => {
@@ -135,6 +137,46 @@ function startJobsPoll() {
   jobsPollTimer = setInterval(() => {
     if (tab === 'jobs') refreshJobs().catch(() => {});
   }, jobsPollMs);
+}
+
+async function armSaleNotifications() {
+  const b = qs('#sale-notify-arm');
+  if (!('Notification' in window)) {
+    toast('Notifications not supported in this browser');
+    return;
+  }
+  try {
+    const perm = await Notification.requestPermission();
+    if (perm === 'granted') {
+      toast('Browser notifications on for new PAID sales');
+      if (b) b.textContent = 'Notifications ON';
+      try {
+        new Notification('VendiPort shop alerts on', {
+          body: 'You will get a ping when a buyer pays.',
+          silent: true,
+        });
+      } catch (_) {}
+    } else {
+      toast('Notification permission denied');
+    }
+  } catch (err) {
+    toast(err.message || 'Could not enable notifications');
+  }
+}
+
+function notifyNewSale(order) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  try {
+    const n = new Notification('New VendiPort sale — pull it', {
+      body: `${order.productTitle || 'Sealed product'} · last-4 ${order.last4}`,
+      tag: `vendiport-paid-${order.id}`,
+      renotify: true,
+    });
+    n.onclick = () => {
+      try { window.focus(); } catch (_) {}
+      n.close();
+    };
+  } catch (_) {}
 }
 
 function armSaleSound() {
@@ -220,6 +262,9 @@ async function refreshJobs() {
     // new sale since first load
     playSaleBeep();
     toast('New PAID sale — pull it');
+    for (const o of paidNow) {
+      if (!knownPaidIds.has(o.id)) notifyNewSale(o);
+    }
   }
   // seed on first load without blasting
   if (knownPaidIds.size === 0) {

@@ -39,6 +39,8 @@ Cold starts on free tier can take ~30–60s after idle.
 
 ## C. Point **vendiport.com** later (GoDaddy DNS only)
 
+Full checklist: **[DNS.md](./DNS.md)**. Summary below.
+
 Do **not** use GoDaddy Website Builder. DNS only:
 
 1. In Render (or Railway), copy the service hostname, e.g. `vendiport-beta.onrender.com`.
@@ -80,3 +82,23 @@ docker run --rm -p 3847:3847 -e DATA_DIR=/data -v vendiport-data:/data vendiport
 | `DATA_DIR` | `./data` | JSON store path (mount a volume here if you add paid disk later) |
 
 No Stripe / Origin / paid APIs required for this beta.
+
+
+---
+
+## E. Stripe TEST keys on Render (optional)
+
+App works with **no keys** (Pay stub). For test Checkout only:
+
+| Env var | Value |
+|---------|--------|
+| `STRIPE_SECRET_KEY` | `sk_test_…` from Stripe (Test mode) |
+| `STRIPE_PUBLISHABLE_KEY` | `pk_test_…` |
+| `PUBLIC_BASE_URL` | `https://vendiport-beta.onrender.com` (or custom domain) |
+| `STRIPE_WEBHOOK_SECRET` | optional; beta mainly uses `/pay/success` → `/api/payments/complete` |
+
+**Do not** set live keys. Reject path: server only enables Stripe when both keys are `*_test_*`.
+
+After keys are set, open machine → checkout → Pay → Stripe hosted test page → returns to `/pay/success` → track page.
+
+DNS for **vendiport.com**: see **[DNS.md](./DNS.md)**.

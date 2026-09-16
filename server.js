@@ -6,6 +6,7 @@
 'use strict';
 
 const http = require('http');
+const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const { randomUUID } = require('crypto');
@@ -17,7 +18,86 @@ const DATA = process.env.DATA_DIR
   ? path.resolve(process.env.DATA_DIR)
   : path.join(ROOT, 'data');
 const PORT = Number(process.env.PORT) || 3847;
+
 const HOST = process.env.HOST || '0.0.0.0';
+const STRIPE_SECRET_KEY = (process.env.STRIPE_SECRET_KEY || '').trim();
+const STRIPE_PUBLISHABLE_KEY = (process.env.STRIPE_PUBLISHABLE_KEY || '').trim();
+const STRIPE_WEBHOOK_SECRET = (process.env.STRIPE_WEBHOOK_SECRET || '').trim();
+const PUBLIC_BASE_URL = (process.env.PUBLIC_BASE_URL || '').replace(/\/$/, '');
+
+function stripeTestModeEnabled() {
+  return (
+    STRIPE_SECRET_KEY.startsWith('sk_test_') &&
+    STRIPE_PUBLISHABLE_KEY.startsWith('pk_test_')
+  );
+}
+
+function stripeRequest(method, pathName, formParams) {
+  return new Promise((resolve, reject) => {
+    if (!STRIPE_SECRET_KEY.startsWith('sk_test_')) {
+      return reject(new Error('Stripe test secret key required (sk_test_…)'));
+    }
+    const body = formParams
+      ? Object.entries(formParams)
+          .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v == null ? '' : String(v))}`)
+          .join('&')
+      : '';
+    const req = https.request(
+      {
+        hostname: 'api.stripe.com',
+        path: pathName,
+        method,
+        headers: {
+          Authorization: `Bearer ${STRIPE_SECRET_KEY}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+          ...(body ? { 'Content-Length': Buffer.byteLength(body) } : {}),
+        },
+      },
+      (res) => {
+        const chunks = [];
+        res.on('data', (c) => chunks.push(c));
+        res.on('end', () => {
+          const raw = Buffer.concat(chunks).toString('utf8');
+          let data;
+          try {
+            data = JSON.parse(raw);
+          } catch {
+            return reject(new Error('Invalid Stripe response'));
+          }
+          if (res.statusCode >= 400) {
+            return reject(new Error((data.error && data.error.message) || `Stripe HTTP ${res.statusCode}`));
+          }
+          resolve(data);
+        });
+      }
+    );
+    req.on('error', reject);
+    if (body) req.write(body);
+    req.end();
+  });
+}
+
+function markOrderPaid(order, paymentMeta) {
+  if (!order) return null;
+  if (order.status === 'PAID' || order.status === 'PACKING' || order.status === 'READY' || order.status === 'PICKED_UP' || order.status === 'DELIVERED_ACCEPTED') {
+    return order;
+  }
+  if (order.status !== 'DRAFT') return null;
+  if (!consumeUnit(order.productId, order.windowId)) {
+    throw new Error('No units left for that window');
+  }
+  order.status = 'PAID';
+  order.updatedAt = new Date().toISOString();
+  order.paidAt = order.updatedAt;
+  order.paymentStub = paymentMeta || {
+    method: 'stub',
+    charged: order.total,
+    note: 'Pay stub — no real Stripe. Marked PAID so shop can pack.',
+  };
+  saveOrder(order);
+  return order;
+}
+
 const DELIVERY_FEE = 10; // flat buyer-paid average courier fee (stub)
 const MIN_ORDER = 25; // demo: placeholder prices under PRD $75 floor
 const CANCEL_FEE_RATE = 0.15; // 15% of product
@@ -229,6 +309,7 @@ function serveStatic(req, res, urlPath) {
   if (rel === '/member' || rel === '/member/' || rel === '/login' || rel === '/login/' || rel === '/join' || rel === '/join/' || rel === '/account' || rel === '/account/') rel = '/member.html';
   if (rel.startsWith('/handoff/')) rel = '/handoff.html';
   if (rel.startsWith('/track/') || rel.startsWith('/order/')) rel = '/track.html';
+  if (rel === '/pay/success' || rel === '/pay/success/') rel = '/pay-success.html';
   if (rel === '/track' || rel === '/order') rel = '/track.html';
 
   const filePath = path.normalize(path.join(PUBLIC, rel));
@@ -409,7 +490,7 @@ async function handleApi(req, res, pathname) {
 
   // GET /api/health
   if (method === 'GET' && pathname === '/api/health') {
-    return send(res, 200, { ok: true, brand: 'VendiPort', port: PORT, dataDir: DATA });
+    return send(res, 200, { ok: true, brand: 'VendiPort', port: PORT, dataDir: DATA, payMode: stripeTestModeEnabled() ? 'stripe_test' : 'stub' });
   }
 
   // GET /api/products — buyer catalog (no shop identity). ?scope=shop includes hidden.
@@ -667,6 +748,197 @@ async function handleApi(req, res, pathname) {
     writeJson('shops.json', shops);
     syncProductsToShopWindow(null, wid);
     return send(res, 200, { deleted: wid });
+  }
+
+  // GET /api/payments/config — stub vs Stripe test (no secrets leaked beyond pk_test)
+  if (method === 'GET' && pathname === '/api/payments/config') {
+    const enabled = stripeTestModeEnabled();
+    return send(res, 200, {
+      mode: enabled ? 'stripe_test' : 'stub',
+      publishableKey: enabled ? STRIPE_PUBLISHABLE_KEY : null,
+      note: enabled
+        ? 'Stripe TEST mode — use card 4242… Never put live sk_live_/pk_live_ keys here.'
+        : 'Pay stub — set STRIPE_SECRET_KEY (sk_test_) + STRIPE_PUBLISHABLE_KEY (pk_test_) on host to enable test checkout.',
+    });
+  }
+
+  // POST /api/payments/checkout — Stripe Checkout Session (test) OR rejected if stub
+  if (method === 'POST' && pathname === '/api/payments/checkout') {
+    if (!stripeTestModeEnabled()) {
+      return sendError(res, 400, 'Stripe test keys not configured — use Pay stub');
+    }
+    const body = await readBody(req);
+    const product = findProduct(body.productId);
+    if (!product) return sendError(res, 400, 'Unknown product');
+    const window =
+      (product.windows || []).find((w) => w.id === body.windowId) || earliestWindow(product);
+    if (!window || !(window.units > 0)) return sendError(res, 409, 'No units for that window');
+    const orderId = randomUUID();
+    const now = new Date().toISOString();
+    const guest = body.membershipOptIn ? 0 : +(product.price * 0.005).toFixed(2);
+    const total = +(product.price + DELIVERY_FEE + guest).toFixed(2);
+    const order = {
+      id: orderId,
+      status: 'DRAFT',
+      productId: product.id,
+      productTitle: product.title,
+      productImage: product.image || null,
+      productEmoji: product.emoji || null,
+      productPrice: product.price,
+      toteQrPayload: `VENDIPORT:ORDER:${orderId}`,
+      deliveryFee: DELIVERY_FEE,
+      guestFee: guest,
+      total,
+      windowId: window.id,
+      windowLabel: window.label,
+      membershipOptIn: !!body.membershipOptIn,
+      shopId: (getPrimaryShop() && getPrimaryShop().id) || null,
+      createdAt: now,
+      updatedAt: now,
+    };
+    saveOrder(order);
+    const base =
+      PUBLIC_BASE_URL ||
+      `${(req.headers['x-forwarded-proto'] || 'http').split(',')[0].trim()}://${req.headers.host}`;
+    try {
+      const session = await stripeRequest('POST', '/v1/checkout/sessions', {
+        mode: 'payment',
+        'payment_method_types[0]': 'card',
+        'line_items[0][price_data][currency]': 'usd',
+        'line_items[0][price_data][product_data][name]': `VendiPort · ${product.title}`,
+        'line_items[0][price_data][unit_amount]': String(Math.round(total * 100)),
+        'line_items[0][quantity]': '1',
+        success_url: `${base}/pay/success?orderId=${orderId}&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${base}/?pay=canceled`,
+        client_reference_id: orderId,
+        'metadata[orderId]': orderId,
+        'payment_intent_data[metadata][orderId]': orderId,
+      });
+      order.stripeCheckoutSessionId = session.id;
+      order.updatedAt = new Date().toISOString();
+      saveOrder(order);
+      return send(res, 200, {
+        mode: 'stripe_test',
+        orderId,
+        url: session.url,
+        sessionId: session.id,
+      });
+    } catch (err) {
+      return sendError(res, 502, err.message || 'Stripe checkout failed');
+    }
+  }
+
+  // POST /api/payments/complete — after Checkout redirect (test)
+  if (method === 'POST' && pathname === '/api/payments/complete') {
+    const body = await readBody(req);
+    const orderId = String(body.orderId || '').trim();
+    const sessionId = String(body.sessionId || body.session_id || '').trim();
+    const order = findOrder(orderId);
+    if (!order) return sendError(res, 404, 'Order not found');
+    if (!stripeTestModeEnabled()) {
+      // allow local complete only as stub pay
+      try {
+        const paid = markOrderPaid(order, {
+          method: 'stub',
+          charged: order.total,
+          note: 'Completed without Stripe keys (stub).',
+        });
+        return send(res, 200, { order: publicOrder(paid) });
+      } catch (err) {
+        return sendError(res, 409, err.message);
+      }
+    }
+    if (!sessionId) return sendError(res, 400, 'sessionId required');
+    try {
+      const session = await stripeRequest('GET', `/v1/checkout/sessions/${sessionId}`);
+      if (session.client_reference_id && session.client_reference_id !== orderId) {
+        return sendError(res, 409, 'Session does not match order');
+      }
+      if (session.payment_status !== 'paid' && session.status !== 'complete') {
+        return sendError(res, 409, `Checkout not paid yet (${session.payment_status || session.status})`);
+      }
+      const paid = markOrderPaid(order, {
+        method: 'stripe_test',
+        charged: order.total,
+        stripeSessionId: sessionId,
+        stripePaymentIntent: session.payment_intent || null,
+        note: 'Stripe TEST Checkout — no live charge.',
+      });
+      return send(res, 200, { order: publicOrder(paid), mode: 'stripe_test' });
+    } catch (err) {
+      return sendError(res, 502, err.message || 'Stripe complete failed');
+    }
+  }
+
+  // POST /api/payments/intent — PaymentIntent scaffold (test) for future Elements
+  if (method === 'POST' && pathname === '/api/payments/intent') {
+    if (!stripeTestModeEnabled()) {
+      return sendError(res, 400, 'Stripe test keys not configured');
+    }
+    const body = await readBody(req);
+    const orderId = String(body.orderId || '').trim();
+    const order = findOrder(orderId);
+    if (!order) return sendError(res, 404, 'Order not found — create DRAFT first');
+    if (order.status !== 'DRAFT') return sendError(res, 409, `Order is ${order.status}`);
+    try {
+      const intent = await stripeRequest('POST', '/v1/payment_intents', {
+        amount: String(Math.round(Number(order.total) * 100)),
+        currency: 'usd',
+        'automatic_payment_methods[enabled]': 'true',
+        'metadata[orderId]': order.id,
+      });
+      order.stripePaymentIntentId = intent.id;
+      order.updatedAt = new Date().toISOString();
+      saveOrder(order);
+      return send(res, 200, {
+        mode: 'stripe_test',
+        clientSecret: intent.client_secret,
+        publishableKey: STRIPE_PUBLISHABLE_KEY,
+        orderId: order.id,
+      });
+    } catch (err) {
+      return sendError(res, 502, err.message || 'PaymentIntent failed');
+    }
+  }
+
+  // POST /api/stripe/webhook — optional stub (test). Prefer Checkout complete URL for beta.
+  if (method === 'POST' && pathname === '/api/stripe/webhook') {
+    const rawChunks = [];
+    await new Promise((resolve, reject) => {
+      req.on('data', (c) => rawChunks.push(c));
+      req.on('end', resolve);
+      req.on('error', reject);
+    });
+    const raw = Buffer.concat(rawChunks).toString('utf8');
+    let event;
+    try {
+      event = JSON.parse(raw || '{}');
+    } catch {
+      return sendError(res, 400, 'Invalid webhook JSON');
+    }
+    // Signature verification skipped unless STRIPE_WEBHOOK_SECRET set (scaffold)
+    if (STRIPE_WEBHOOK_SECRET) {
+      console.log('Stripe webhook secret present — full signature verify not implemented in beta scaffold; use /api/payments/complete');
+    }
+    const type = event.type || '';
+    const obj = (event.data && event.data.object) || {};
+    const orderId = (obj.metadata && obj.metadata.orderId) || obj.client_reference_id || null;
+    if (orderId && (type === 'checkout.session.completed' || type === 'payment_intent.succeeded')) {
+      const order = findOrder(orderId);
+      if (order && order.status === 'DRAFT') {
+        try {
+          markOrderPaid(order, {
+            method: 'stripe_test_webhook',
+            charged: order.total,
+            note: `Webhook stub: ${type}`,
+            stripeId: obj.id || null,
+          });
+        } catch (err) {
+          console.error('webhook pay failed', err.message);
+        }
+      }
+    }
+    return send(res, 200, { received: true, type });
   }
 
   // GET /api/orders
@@ -1064,22 +1336,17 @@ function consumeUnit(productId, windowId) {
 function payOrder(res, id) {
   const order = findOrder(id);
   if (!order) return sendError(res, 404, 'Order not found');
-  if (order.status !== 'DRAFT') {
-    return sendError(res, 409, `Cannot pay from ${order.status}`);
+  try {
+    const paid = markOrderPaid(order, {
+      method: 'stub',
+      charged: order.total,
+      note: 'Pay stub — no real Stripe. Marked PAID so shop can pack.',
+    });
+    if (!paid) return sendError(res, 409, `Cannot pay from ${order.status}`);
+    return send(res, 200, { order: publicOrder(paid) });
+  } catch (err) {
+    return sendError(res, 409, err.message || 'Pay failed');
   }
-  if (!consumeUnit(order.productId, order.windowId)) {
-    return sendError(res, 409, 'No units left for that window');
-  }
-  order.status = 'PAID';
-  order.updatedAt = new Date().toISOString();
-  order.paidAt = order.updatedAt;
-  order.paymentStub = {
-    method: 'stub',
-    charged: order.total,
-    note: 'Pay stub — no real Stripe. Marked PAID so shop can pack.',
-  };
-  saveOrder(order);
-  return send(res, 200, { order: publicOrder(order) });
 }
 
 function transition(res, id, from, to) {
@@ -1127,4 +1394,5 @@ server.listen(PORT, HOST, () => {
   console.log(`  Handoff: http://${HOST}:${PORT}/handoff/<orderId>`);
   console.log(`  Track:   http://${HOST}:${PORT}/track/<orderId>`);
   console.log(`  Data:    ${DATA}`);
+  console.log(`  Pay:     ${stripeTestModeEnabled() ? 'Stripe TEST' : 'stub (no STRIPE_* test keys)'}`);
 });

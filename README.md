@@ -3,7 +3,7 @@
 Phone-first **virtual vending machine** for sealed trading cards + same-day local tote delivery.
 
 **Live beta:** https://vendiport-beta.onrender.com  
-(Auto-deploys from `main` · free-tier disk may reset · no live Stripe/courier)
+(Auto-deploys from `main` · free-tier disk may reset · Pay **stub** by default · optional Stripe **TEST** keys · no live courier)
 
 Buyer UI is **one anonymous machine** — never shows shop name. Membership is top-right (`/account`) before checkout. Tote bags have **pre-printed QR**; buyers scan that tote QR at the door.
 
@@ -34,3 +34,19 @@ Shop tabs: **Jobs · Inventory · Windows · Stats** (orders today by status, un
 ## Deploy
 
 See **[DEPLOY.md](./DEPLOY.md)** (Render free + GoDaddy DNS for vendiport.com later).
+
+
+## Payments (stub vs Stripe TEST)
+
+Runs **without any Stripe keys** (Pay stub). To enable **test-mode** Checkout later on Render:
+
+1. Stripe Dashboard → Developers → API keys → copy **test** `sk_test_…` and `pk_test_…` (never `sk_live_` / `pk_live_`).
+2. Render → Environment → add:
+   - `STRIPE_SECRET_KEY` = `sk_test_…`
+   - `STRIPE_PUBLISHABLE_KEY` = `pk_test_…`
+   - Optional: `PUBLIC_BASE_URL` = `https://vendiport-beta.onrender.com` (or custom domain)
+   - Optional: `STRIPE_WEBHOOK_SECRET` (webhook scaffold only)
+3. Redeploy. Buyer Pay redirects to Stripe Checkout (test card `4242 4242 4242 4242`).
+4. **Never commit secrets.** See **DEPLOY.md** + **DNS.md**.
+
+`GET /api/payments/config` → `{ mode: "stub" | "stripe_test" }`.

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>VendiPort — Payment</title>
+  <link rel="stylesheet" href="/css/app.css" />
+  <link rel="stylesheet" href="/css/machine.css" />
+</head>
+<body class="machine-body">
+  <div class="app">
+    <header class="marquee">
+      <div class="brand-row">
+        <div class="brand-mark">V</div>
+        <div class="name">VendiPort</div>
+      </div>
+      <div class="tag">PAYMENT</div>
+    </header>
+    <div class="co-machine">
+      <div class="panel-label">Confirming payment</div>
+      <p id="pay-msg" style="font-size:14px;line-height:1.45">Finishing Stripe test checkout…</p>
+      <p class="footer-note">Test mode only — no live charges.</p>
+    </div>
+  </div>
+  <script src="/js/api.js"></script>
+  <script>
+    (async () => {
+      const q = new URLSearchParams(location.search);
+      const orderId = q.get('orderId');
+      const sessionId = q.get('session_id') || q.get('sessionId');
+      const msg = document.getElementById('pay-msg');
+      if (!orderId) {
+        msg.textContent = 'Missing order id.';
+        return;
+      }
+      try {
+        const { order } = await api('/api/payments/complete', {
+          method: 'POST',
+          body: JSON.stringify({ orderId, sessionId }),
+        });
+        try { localStorage.setItem('vendiport_last_order', order.id); } catch (_) {}
+        msg.textContent = 'Paid (Stripe test). Redirecting to track…';
+        location.replace('/track/' + order.id);
+      } catch (err) {
+        msg.textContent = (err && err.message) || 'Payment confirm failed';
+      }
+    })();
+  </script>
+</body>
+</html>

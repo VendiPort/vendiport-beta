@@ -99,6 +99,7 @@ function renderCheckout() {
   qs('#view-paid').classList.add('hidden');
   renderAccountChip();
   paintBuyerStream('checkout', 'checkout');
+  loadPayConfig().catch(() => {});
 
   const p = selected.product;
   const t = calcTotals();
@@ -138,10 +139,44 @@ function renderCheckout() {
   }
 }
 
+let payConfig = { mode: 'stub' };
+
+async function loadPayConfig() {
+  try {
+    payConfig = await api('/api/payments/config');
+  } catch {
+    payConfig = { mode: 'stub' };
+  }
+  const sub = qs('#co-total-sub');
+  const btn = qs('#pay-btn');
+  if (payConfig.mode === 'stripe_test') {
+    if (sub) sub.textContent = 'Stripe TEST checkout · use 4242… · no live charges';
+    if (btn) btn.classList.add('stripe-test');
+  } else {
+    if (sub) sub.textContent = 'Pay stub · no real Stripe (set sk_test_/pk_test_ on host for test mode)';
+  }
+}
+
 async function payStub() {
   const btn = qs('#pay-btn');
   btn.disabled = true;
   try {
+    if (!payConfig || !payConfig.mode) await loadPayConfig();
+    if (payConfig.mode === 'stripe_test') {
+      const { url, orderId } = await api('/api/payments/checkout', {
+        method: 'POST',
+        body: JSON.stringify({
+          productId: selected.product.id,
+          windowId: selected.windowId,
+          membershipOptIn: membershipOn(),
+        }),
+      });
+      if (!url) throw new Error('No Stripe Checkout URL');
+      try { localStorage.setItem('vendiport_last_order', orderId); } catch (_) {}
+      toast('Redirecting to Stripe TEST Checkout…');
+      location.href = url;
+      return;
+    }
     const { order } = await api('/api/orders', {
       method: 'POST',
       body: JSON.stringify({
@@ -235,5 +270,6 @@ document.addEventListener('DOMContentLoaded', () => {
   qs('#back-browse').addEventListener('click', () => loadBrowse());
   qs('#pay-btn').addEventListener('click', payStub);
   renderAccountChip();
+  loadPayConfig().catch(() => {});
   loadBrowse().catch((e) => toast(e.message));
 });
