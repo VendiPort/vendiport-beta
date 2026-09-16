@@ -3,8 +3,8 @@
   --bg2: #12161e;
   --card: #161b24;
   --border: #2a3344;
-  --teal: #2ec4b6;
-  --teal-dim: rgba(46, 196, 182, 0.15);
+  --teal: #4fd1c5;
+  --teal-dim: rgba(79, 209, 197, 0.15);
   --red: #e84a4a;
   --red-dim: rgba(232, 74, 74, 0.15);
   --text: #eef2f7;
@@ -403,10 +403,10 @@ h1.sm { font-size: 22px; }
 
 /* —— Virtual vending machine (buyer browse) —— */
 :root {
-  --chrome: #9aa3b5;
-  --chrome-dark: #3a4254;
-  --led: #2ec4b6;
-  --led-glow: rgba(46, 196, 182, 0.55);
+  --chrome: #4fd1c5;
+  --chrome-dark: #0e1a1c;
+  --led: #4fd1c5;
+  --led-glow: rgba(79, 209, 197, 0.55);
   --coral: #ff5a5f;
   --coral-glow: rgba(255, 90, 95, 0.55);
   --glass: rgba(180, 210, 230, 0.06);
@@ -414,9 +414,9 @@ h1.sm { font-size: 22px; }
 
 body.machine-body {
   background:
-    radial-gradient(ellipse at 50% 0%, #15202e 0%, transparent 55%),
-    radial-gradient(ellipse at 80% 100%, #101820 0%, transparent 40%),
-    #07090d;
+    radial-gradient(ellipse at 50% -8%, rgba(79,209,197,0.12) 0%, transparent 48%),
+    radial-gradient(ellipse at 80% 100%, rgba(16,32,40,0.5) 0%, transparent 40%),
+    #030508;
 }
 
 .marquee {
@@ -424,12 +424,12 @@ body.machine-body {
   margin: 0 0 12px;
   padding: 12px 14px 14px;
   border-radius: 16px 16px 10px 10px;
-  background: linear-gradient(180deg, #2a3140 0%, #151a24 55%, #0e121a 100%);
-  border: 1px solid #4a5568;
+  background: linear-gradient(180deg, #0e1a1c 0%, #070d10 55%, #040608 100%);
+  border: 1px solid rgba(79,209,197,0.5);
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.18),
-    inset 0 -2px 6px rgba(0,0,0,0.45),
-    0 0 24px rgba(46, 196, 182, 0.12);
+    inset 0 1px 0 rgba(79,209,197,0.2),
+    inset 0 -2px 6px rgba(0,0,0,0.55),
+    0 0 24px rgba(79, 209, 197, 0.22);
   text-align: center;
   overflow: hidden;
 }
@@ -497,13 +497,14 @@ body.machine-body {
   border-radius: 22px;
   padding: 12px 10px 14px;
   background:
-    linear-gradient(160deg, #3d4658 0%, #1a1f2b 18%, #12161f 70%, #0c1018 100%);
-  border: 2px solid #5b6578;
+    linear-gradient(160deg, #122022 0%, #0a1214 18%, #05080a 70%, #030506 100%);
+  border: 2px solid #4fd1c5;
   box-shadow:
-    inset 0 2px 0 rgba(255,255,255,0.22),
-    inset 0 -8px 18px rgba(0,0,0,0.55),
-    0 12px 40px rgba(0,0,0,0.55),
-    0 0 0 1px #0a0c10;
+    inset 0 1px 0 rgba(79,209,197,0.3),
+    inset 0 -8px 18px rgba(0,0,0,0.65),
+    0 0 20px rgba(79,209,197,0.3),
+    0 0 40px rgba(79,209,197,0.12),
+    0 12px 40px rgba(0,0,0,0.6);
 }
 .machine::before {
   /* glass reflection */
@@ -511,7 +512,7 @@ body.machine-body {
   position: absolute;
   inset: 8px;
   border-radius: 16px;
-  background: linear-gradient(125deg, rgba(255,255,255,0.09) 0%, transparent 35%, transparent 65%, rgba(46,196,182,0.04) 100%);
+  background: linear-gradient(125deg, rgba(79,209,197,0.1) 0%, transparent 35%, transparent 65%, rgba(79,209,197,0.04) 100%);
   pointer-events: none;
   z-index: 2;
 }
@@ -521,11 +522,11 @@ body.machine-body {
   border-radius: 14px;
   padding: 10px 8px;
   background:
-    linear-gradient(180deg, rgba(20,28,40,0.95), rgba(8,10,16,0.98));
-  border: 1px solid rgba(120, 140, 170, 0.35);
+    linear-gradient(180deg, rgba(6,12,14,0.98), rgba(3,5,6,0.99));
+  border: 1px solid rgba(79, 209, 197, 0.35);
   box-shadow:
-    inset 0 0 0 1px rgba(46, 196, 182, 0.12),
-    inset 0 0 40px rgba(0,0,0,0.55);
+    inset 0 0 0 1px rgba(79, 209, 197, 0.15),
+    inset 0 0 40px rgba(0,0,0,0.65);
   min-height: 280px;
 }
 .machine-glass::after {
