@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#07090d" />
+  <title>VendiPort — Handoff</title>
+  <link rel="stylesheet" href="/css/app.css" />
+  <link rel="stylesheet" href="/css/machine.css" />
+</head>
+<body class="machine-body">
+  <div class="app">
+    <header class="marquee">
+      <div class="brand-row">
+        <div class="brand-mark">V</div>
+        <div class="name">VendiPort</div>
+      </div>
+      <div class="tag">DOOR HANDOFF</div>
+      <div class="leds" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+    </header>
+
+    <div class="step-label">Verify seal · scan or upload the QR on your tote bag</div>
+    <h1 class="sm">Handoff</h1>
+    <p class="sub">Scan or upload the QR on your tote bag to confirm a secured, untampered package. Sale final only after that tote QR matches this order. Refuse if seal / tote QR fail — full refund.</p>
+
+    <div id="handoff-body"></div>
+    <p class="footer-note"><a href="/">Buyer machine</a> · <a href="/shop">Shop</a></p>
+  </div>
+  <script src="/js/api.js"></script>
+  <script src="/js/handoff.js"></script>
+</body>
+</html>

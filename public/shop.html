@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a0c10" />
+  <title>VendiPort — Shop</title>
+  <link rel="stylesheet" href="/css/app.css" />
+  <link rel="stylesheet" href="/css/machine.css" />
+  <style>
+    .tabs { display:flex; gap:6px; margin: 10px 0 14px; }
+    .tab {
+      flex:1; border:1px solid #2a3344; background:#12161e; color:#cfd6e2;
+      padding:10px 8px; border-radius:10px; font-weight:800; font-size:12px; letter-spacing:.04em;
+    }
+    .tab.on { background:#e84a4a; border-color:#e84a4a; color:#fff; }
+    .field { margin-bottom:10px; }
+    .field label { display:block; font-size:11px; color:#8b95a8; margin-bottom:4px; letter-spacing:.06em; text-transform:uppercase; }
+    .field input, .field select, .field textarea {
+      width:100%; background:#0e1218; border:1px solid #2a3344; color:#eef2f7;
+      border-radius:10px; padding:10px 12px; font:inherit;
+    }
+    .inv-row { display:grid; grid-template-columns:48px 1fr; gap:10px; align-items:center; }
+    .inv-actions { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+    .money-strip { font-size:11px; color:#8b95a8; line-height:1.4; margin:8px 0 12px; padding:10px; border:1px solid #2a3344; border-radius:10px; }
+  </style>
+</head>
+<body class="shop-body">
+  <div class="app shop">
+    <div class="topbar">
+      <div class="brand shop">
+        <div class="brand-mark">V</div>
+        <span>VendiPort</span>
+        <span class="pill">Shop</span>
+      </div>
+      <div class="mono" id="staff-label">Staff</div>
+    </div>
+
+    <div class="step-label">Fulfillment terminal</div>
+    <h1 class="sm" id="page-title">Jobs</h1>
+    <p class="sub" id="page-sub">Shop stream: PAID → pack → seal → READY → pickup → done</p>
+
+    <div class="tabs" role="tablist">
+      <button type="button" class="tab on" data-tab="jobs">Jobs</button>
+      <button type="button" class="tab" data-tab="inventory">Inventory</button>
+      <button type="button" class="tab" data-tab="windows">Windows</button>
+    </div>
+
+    <div class="money-strip">
+      ~15% platform take · Partnership $0 ×3 mo then $50/mo ($30 annual) · Totes: first 10 free, then at cost ·
+      Buyer-paid flat delivery · Own-driver ON = shop keeps transport fee
+    </div>
+
+    <!-- JOBS -->
+    <section id="tab-jobs">
+      <div class="card">
+        <div class="toggle-row">
+          <div class="copy">
+            <strong id="shop-name">Demo shop</strong>
+            <p id="mode-copy">Own-driver OFF — platform hours + courier average fee.</p>
+          </div>
+          <label class="switch shop">
+            <input type="checkbox" id="own-driver" />
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+      <div id="job-list"></div>
+    </section>
+
+    <!-- INVENTORY -->
+    <section id="tab-inventory" class="hidden">
+      <div class="card">
+        <div class="step-label">Add sealed product</div>
+        <p class="sub" style="margin-bottom:10px">Appears on anonymous buyer machine — never show shop name.</p>
+        <div class="field"><label>Title</label><input id="inv-title" placeholder="2022 Panini Example Football" /></div>
+        <div class="field"><label>Subtitle / config</label><input id="inv-sub" placeholder="Sealed blaster · Demo price — confirm with shop" /></div>
+        <div class="field"><label>Category</label>
+          <select id="inv-cat"><option>Football</option><option>Baseball</option><option>Wrestling</option><option>Hockey</option><option>Other</option></select>
+        </div>
+        <div class="field"><label>Price ($)</label><input id="inv-price" type="number" min="0" step="1" value="40" /></div>
+        <div class="field"><label>Units (earliest / primary window)</label><input id="inv-units" type="number" min="0" step="1" value="2" /></div>
+        <div class="field"><label>Primary window label</label><input id="inv-window" value="Today 4-6pm" /></div>
+        <div class="field"><label>Image URL (optional)</label><input id="inv-url" placeholder="/img/products/….jpg or https://…" /></div>
+        <div class="field"><label>Or upload image</label><input id="inv-file" type="file" accept="image/*" /></div>
+        <button type="button" class="btn btn-red btn-block" id="inv-add">Add to machine</button>
+      </div>
+      <div id="inv-list"></div>
+    </section>
+
+    <!-- WINDOWS -->
+    <section id="tab-windows" class="hidden">
+      <div class="card">
+        <div class="step-label">Delivery windows</div>
+        <p class="sub" id="win-mode">When own-driver ON, these windows drive buyer slots (no shop name shown).</p>
+        <div class="field"><label>New window label</label><input id="win-label" placeholder="Today 5-7pm" /></div>
+        <div class="field"><label>Capacity</label><input id="win-cap" type="number" min="0" value="6" /></div>
+        <button type="button" class="btn btn-teal btn-block" id="win-add">Add window</button>
+      </div>
+      <div id="win-list"></div>
+      <div class="card" style="margin-top:12px">
+        <div class="step-label">Platform defaults (when own-driver OFF)</div>
+        <p class="mono" id="platform-wins"></p>
+      </div>
+    </section>
+
+    <p class="footer-note"><a href="/">← Buyer machine</a></p>
+  </div>
+  <script src="/js/api.js"></script>
+  <script src="/js/session.js"></script>
+  <script src="/js/shop.js"></script>
+</body>
+</html>

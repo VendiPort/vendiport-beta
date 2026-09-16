@@ -1,0 +1,426 @@
+[
+  {
+    "id": "2021-panini-score-football",
+    "title": "2021 Panini Score Football",
+    "subtitle": "Sealed box · 40 cards/pack · 12 packs/box · Demo price — confirm with shop",
+    "category": "Football",
+    "price": 45,
+    "emoji": "🏈",
+    "tile": "SC21",
+    "windows": [
+      {
+        "id": "w_today_1400",
+        "label": "Today 2-4pm",
+        "units": 0
+      },
+      {
+        "id": "w_today_1600",
+        "label": "Today 4-6pm",
+        "units": 0
+      },
+      {
+        "id": "w_today_1800",
+        "label": "Today 6-8pm",
+        "units": 3
+      },
+      {
+        "id": "w_today_5_7pm-dsq",
+        "label": "Today 5-7pm",
+        "units": 0
+      }
+    ],
+    "image": "/img/products/2021-panini-score-football.jpg"
+  },
+  {
+    "id": "2022-panini-score-football",
+    "title": "2022 Panini Score Football",
+    "subtitle": "Sealed · 24 packs · 12 cards/pack · Demo price — confirm with shop",
+    "category": "Football",
+    "price": 40,
+    "emoji": "🏈",
+    "tile": "SC22",
+    "windows": [
+      {
+        "id": "w_today_1600",
+        "label": "Today 4-6pm",
+        "units": 3
+      },
+      {
+        "id": "w_today_1800",
+        "label": "Today 6-8pm",
+        "units": 4
+      },
+      {
+        "id": "w_tmr_1000",
+        "label": "Tomorrow 10am-12pm",
+        "units": 4
+      },
+      {
+        "id": "w_today_1400",
+        "label": "Today 2-4pm",
+        "units": 4
+      },
+      {
+        "id": "w_today_5_7pm-dsq",
+        "label": "Today 5-7pm",
+        "units": 0
+      }
+    ],
+    "image": "/img/products/2022-panini-score-football.jpg"
+  },
+  {
+    "id": "2022-panini-absolute-football",
+    "title": "2022 Panini Absolute Football",
+    "subtitle": "Sealed blaster · Demo price — confirm with shop",
+    "category": "Football",
+    "price": 35,
+    "emoji": "🏈",
+    "tile": "ABS",
+    "windows": [
+      {
+        "id": "w_today_1800",
+        "label": "Today 6-8pm",
+        "units": 2
+      },
+      {
+        "id": "w_today_1600",
+        "label": "Today 4-6pm",
+        "units": 3
+      },
+      {
+        "id": "w_tmr_1000",
+        "label": "Tomorrow 10am-12pm",
+        "units": 3
+      },
+      {
+        "id": "w_today_1400",
+        "label": "Today 2-4pm",
+        "units": 3
+      },
+      {
+        "id": "w_today_5_7pm-dsq",
+        "label": "Today 5-7pm",
+        "units": 0
+      }
+    ],
+    "image": "/img/products/2022-panini-absolute-football.jpg"
+  },
+  {
+    "id": "2022-panini-mosaic-football",
+    "title": "2022 Panini Mosaic Football",
+    "subtitle": "Sealed box · Demo price — confirm with shop",
+    "category": "Football",
+    "price": 55,
+    "emoji": "🏈",
+    "tile": "MOS",
+    "windows": [
+      {
+        "id": "w_today_1400",
+        "label": "Today 2-4pm",
+        "units": 1
+      },
+      {
+        "id": "w_today_1600",
+        "label": "Today 4-6pm",
+        "units": 2
+      },
+      {
+        "id": "w_today_1800",
+        "label": "Today 6-8pm",
+        "units": 2
+      },
+      {
+        "id": "w_today_5_7pm-dsq",
+        "label": "Today 5-7pm",
+        "units": 0
+      }
+    ],
+    "image": "/img/products/2022-panini-mosaic-football.jpg"
+  },
+  {
+    "id": "2021-panini-contenders-football",
+    "title": "2021 Panini Contenders Football",
+    "subtitle": "Sealed blaster · Demo price — confirm with shop",
+    "category": "Football",
+    "price": 40,
+    "emoji": "🏈",
+    "tile": "CON",
+    "windows": [
+      {
+        "id": "w_today_1600",
+        "label": "Today 4-6pm",
+        "units": 2
+      },
+      {
+        "id": "w_today_1800",
+        "label": "Today 6-8pm",
+        "units": 3
+      },
+      {
+        "id": "w_tmr_1000",
+        "label": "Tomorrow 10am-12pm",
+        "units": 3
+      },
+      {
+        "id": "w_today_1400",
+        "label": "Today 2-4pm",
+        "units": 3
+      },
+      {
+        "id": "w_today_5_7pm-dsq",
+        "label": "Today 5-7pm",
+        "units": 0
+      }
+    ],
+    "image": "/img/products/2021-panini-contenders-football.jpg"
+  },
+  {
+    "id": "2022-panini-donruss-football",
+    "title": "2022 Panini Donruss Football",
+    "subtitle": "Sealed blaster · Demo price — confirm with shop",
+    "category": "Football",
+    "price": 35,
+    "emoji": "🏈",
+    "tile": "DON",
+    "windows": [
+      {
+        "id": "w_today_1800",
+        "label": "Today 6-8pm",
+        "units": 4
+      },
+      {
+        "id": "w_today_1600",
+        "label": "Today 4-6pm",
+        "units": 4
+      },
+      {
+        "id": "w_tmr_1000",
+        "label": "Tomorrow 10am-12pm",
+        "units": 5
+      },
+      {
+        "id": "w_today_1400",
+        "label": "Today 2-4pm",
+        "units": 4
+      },
+      {
+        "id": "w_today_5_7pm-dsq",
+        "label": "Today 5-7pm",
+        "units": 0
+      }
+    ],
+    "image": "/img/products/2022-panini-donruss-football.jpg"
+  },
+  {
+    "id": "2022-panini-donruss-optic-football",
+    "title": "2022 Panini Donruss Optic Football",
+    "subtitle": "Sealed blaster · Demo price — confirm with shop",
+    "category": "Football",
+    "price": 45,
+    "emoji": "🏈",
+    "tile": "OPT",
+    "windows": [
+      {
+        "id": "w_today_1400",
+        "label": "Today 2-4pm",
+        "units": 3
+      },
+      {
+        "id": "w_today_1600",
+        "label": "Today 4-6pm",
+        "units": 4
+      },
+      {
+        "id": "w_today_1800",
+        "label": "Today 6-8pm",
+        "units": 4
+      },
+      {
+        "id": "w_today_5_7pm-dsq",
+        "label": "Today 5-7pm",
+        "units": 0
+      }
+    ],
+    "image": "/img/products/2022-panini-donruss-optic-football.jpg"
+  },
+  {
+    "id": "2022-topps-chrome-baseball",
+    "title": "2022 Topps Chrome Baseball",
+    "subtitle": "Sealed blaster · Demo price — confirm with shop",
+    "category": "Baseball",
+    "price": 50,
+    "emoji": "⚾",
+    "tile": "CHR",
+    "windows": [
+      {
+        "id": "w_today_1600",
+        "label": "Today 4-6pm",
+        "units": 0
+      },
+      {
+        "id": "w_today_1800",
+        "label": "Today 6-8pm",
+        "units": 2
+      },
+      {
+        "id": "w_tmr_1000",
+        "label": "Tomorrow 10am-12pm",
+        "units": 2
+      },
+      {
+        "id": "w_today_1400",
+        "label": "Today 2-4pm",
+        "units": 2
+      },
+      {
+        "id": "w_today_5_7pm-dsq",
+        "label": "Today 5-7pm",
+        "units": 0
+      }
+    ],
+    "image": "/img/products/2022-topps-chrome-baseball.jpg"
+  },
+  {
+    "id": "2023-topps-series-1-baseball",
+    "title": "2023 Topps Series 1 Baseball",
+    "subtitle": "Sealed blaster · Demo price — confirm with shop",
+    "category": "Baseball",
+    "price": 30,
+    "emoji": "⚾",
+    "tile": "S1",
+    "windows": [
+      {
+        "id": "w_today_1800",
+        "label": "Today 6-8pm",
+        "units": 3
+      },
+      {
+        "id": "w_today_1600",
+        "label": "Today 4-6pm",
+        "units": 3
+      },
+      {
+        "id": "w_tmr_1000",
+        "label": "Tomorrow 10am-12pm",
+        "units": 4
+      },
+      {
+        "id": "w_today_1400",
+        "label": "Today 2-4pm",
+        "units": 4
+      },
+      {
+        "id": "w_today_5_7pm-dsq",
+        "label": "Today 5-7pm",
+        "units": 0
+      }
+    ],
+    "image": "/img/products/2023-topps-series-1-baseball.jpg"
+  },
+  {
+    "id": "2022-leaf-draft-baseball",
+    "title": "2022 Leaf Draft Baseball",
+    "subtitle": "Sealed box · Demo price — confirm with shop",
+    "category": "Baseball",
+    "price": 40,
+    "emoji": "⚾",
+    "tile": "DFT",
+    "windows": [
+      {
+        "id": "w_today_1400",
+        "label": "Today 2-4pm",
+        "units": 2
+      },
+      {
+        "id": "w_today_1600",
+        "label": "Today 4-6pm",
+        "units": 3
+      },
+      {
+        "id": "w_today_1800",
+        "label": "Today 6-8pm",
+        "units": 3
+      },
+      {
+        "id": "w_today_5_7pm-dsq",
+        "label": "Today 5-7pm",
+        "units": 0
+      }
+    ]
+  },
+  {
+    "id": "leaf-metal-legends-wrestling",
+    "title": "Leaf Metal Legends Wrestling",
+    "subtitle": "Sealed box · Demo price — confirm with shop",
+    "category": "Wrestling",
+    "price": 45,
+    "emoji": "🤼",
+    "tile": "MET",
+    "windows": [
+      {
+        "id": "w_today_1600",
+        "label": "Today 4-6pm",
+        "units": 1
+      },
+      {
+        "id": "w_today_1800",
+        "label": "Today 6-8pm",
+        "units": 2
+      },
+      {
+        "id": "w_tmr_1000",
+        "label": "Tomorrow 10am-12pm",
+        "units": 2
+      },
+      {
+        "id": "w_today_1400",
+        "label": "Today 2-4pm",
+        "units": 2
+      },
+      {
+        "id": "w_today_5_7pm-dsq",
+        "label": "Today 5-7pm",
+        "units": 0
+      }
+    ],
+    "image": "/img/products/leaf-metal-legends-wrestling.jpg"
+  },
+  {
+    "id": "shop-upload-test-blaster-udtq",
+    "title": "Shop Upload Test Blaster",
+    "subtitle": "Sealed blaster · Demo price — confirm with shop",
+    "category": "Football",
+    "price": 42,
+    "emoji": "🏈",
+    "tile": "SHOP",
+    "image": null,
+    "hidden": false,
+    "windows": [
+      {
+        "id": "w_today_1400",
+        "label": "Today 2-4pm",
+        "units": 3
+      },
+      {
+        "id": "w_today_1600",
+        "label": "Today 4-6pm",
+        "units": 0
+      },
+      {
+        "id": "w_today_1800",
+        "label": "Today 6-8pm",
+        "units": 0
+      },
+      {
+        "id": "w_tmr_1000",
+        "label": "Tomorrow 10am-12pm",
+        "units": 0
+      },
+      {
+        "id": "w_today_5_7pm-dsq",
+        "label": "Today 5-7pm",
+        "units": 0
+      }
+    ]
+  }
+]

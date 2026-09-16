@@ -1,0 +1,42 @@
+[
+  {
+    "id": "shop_demo_01",
+    "name": "Bay Area Demo Shop",
+    "ownDriver": true,
+    "customWindows": true,
+    "staffLabel": "Staff Demo",
+    "note": "Internal fulfillment only — never shown on buyer UI",
+    "windows": [
+      {
+        "id": "w_today_1400",
+        "label": "Today 2-4pm",
+        "capacity": 8,
+        "active": true
+      },
+      {
+        "id": "w_today_1600",
+        "label": "Today 4-6pm",
+        "capacity": 10,
+        "active": true
+      },
+      {
+        "id": "w_today_1800",
+        "label": "Today 6-8pm",
+        "capacity": 10,
+        "active": true
+      },
+      {
+        "id": "w_tmr_1000",
+        "label": "Tomorrow 10am-12pm",
+        "capacity": 12,
+        "active": true
+      },
+      {
+        "id": "w_today_5_7pm-dsq",
+        "label": "Today 5-7pm",
+        "capacity": 5,
+        "active": true
+      }
+    ]
+  }
+]

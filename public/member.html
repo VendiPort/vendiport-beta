@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#07090d" />
+  <title>VendiPort — Account</title>
+  <link rel="stylesheet" href="/css/app.css" />
+  <link rel="stylesheet" href="/css/machine.css" />
+</head>
+<body class="machine-body">
+  <div class="app">
+    <header class="marquee marquee-account">
+      <div class="brand-row brand-row-spread">
+        <div class="brand-left">
+          <div class="brand-mark">V</div>
+          <div class="name">VendiPort</div>
+        </div>
+        <div id="account-chip" class="account-chip"></div>
+      </div>
+      <div class="tag">ACCOUNT</div>
+      <div class="leds" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+    </header>
+
+    <p class="sub"><a class="back" href="/">← Machine</a></p>
+
+    <div class="stream-wrap">
+      <div class="panel-label">Membership stream</div>
+      <div id="member-stream" class="vp-stream"></div>
+    </div>
+
+    <!-- HUB — familiar marketplace account menu -->
+    <section id="view-hub" class="co-machine">
+      <div class="panel-label">Your account</div>
+      <h1 class="sm" style="margin:6px 0 8px">Sign in or join</h1>
+      <p style="font-size:13px;color:var(--muted);line-height:1.45;margin:0 0 14px">
+        Same pattern as OfferUp / Mercari / StockX: account lives top-right.
+        Membership is bought here — <strong>before</strong> product checkout — not in the cart.
+      </p>
+      <div class="acct-menu">
+        <a class="acct-menu-row" href="#login">
+          <span class="ico">🔑</span>
+          <span class="copy"><strong>Sign in</strong><small>Returning member</small></span>
+          <span class="chev">→</span>
+        </a>
+        <a class="acct-menu-row" href="#create">
+          <span class="ico">✨</span>
+          <span class="copy"><strong>Create account</strong><small>Phone or email · demo</small></span>
+          <span class="chev">→</span>
+        </a>
+        <a class="acct-menu-row highlight" href="#join">
+          <span class="ico">◈</span>
+          <span class="copy"><strong>Join membership</strong><small>$1.99/mo · first month free</small></span>
+          <span class="chev">→</span>
+        </a>
+      </div>
+      <p class="footer-note">Guests can browse the machine freely. Guest fee +0.5% only at checkout.</p>
+    </section>
+
+    <!-- JOIN MEMBERSHIP -->
+    <section id="view-join" class="co-machine hidden">
+      <div class="panel-label">Join membership</div>
+      <h1 class="sm" style="margin:6px 0 10px">$1.99/mo · first month free</h1>
+      <p style="font-size:13px;color:var(--muted);line-height:1.45;margin:0 0 12px">
+        No guest fee on orders + rewards stub. Cancel anytime. Pay stub only — no real Stripe.
+      </p>
+      <div class="panel">
+        <div class="line"><span class="muted">Browse machine</span><span>Free</span></div>
+        <div class="line"><span class="muted">Guest checkout</span><span>+0.5%</span></div>
+        <div class="line"><span class="muted">Member checkout</span><span>No guest fee</span></div>
+        <div class="line total"><span>Due today</span><span>$0.00</span></div>
+      </div>
+      <div class="field">
+        <label class="field-label">Phone or email</label>
+        <input id="join-contact" type="text" placeholder="you@email.com or +1…" class="field-input" />
+      </div>
+      <button type="button" class="pay-stub" id="join-pay" style="margin-top:12px">
+        Become member — Pay stub
+        <span class="subline">$1.99/mo · first month free · no real charge</span>
+      </button>
+      <p class="footer-note"><a href="#hub">← Account menu</a> · <a href="#login">Sign in</a></p>
+    </section>
+
+    <!-- SIGN IN -->
+    <section id="view-login" class="co-machine hidden">
+      <div class="panel-label">Sign in</div>
+      <h1 class="sm" style="margin:6px 0 10px">Welcome back</h1>
+      <p style="font-size:13px;color:var(--muted);line-height:1.45;margin:0 0 12px">
+        Demo auth — phone or email, then continue. No password in this beta.
+      </p>
+      <div class="field">
+        <label class="field-label">Phone or email</label>
+        <input id="login-contact" type="text" placeholder="you@email.com or +1…" class="field-input" />
+      </div>
+      <button type="button" class="pay-stub" id="login-go" style="margin-top:12px">
+        Continue
+        <span class="subline">Demo login stub</span>
+      </button>
+      <p class="footer-note"><a href="#hub">← Account menu</a> · <a href="#join">Join $1.99</a></p>
+    </section>
+
+    <!-- CREATE ACCOUNT -->
+    <section id="view-create" class="co-machine hidden">
+      <div class="panel-label">Create account</div>
+      <h1 class="sm" style="margin:6px 0 10px">New buyer</h1>
+      <p style="font-size:13px;color:var(--muted);line-height:1.45;margin:0 0 12px">
+        Create a free account, then optionally join membership ($1.99 · first month free) before checkout.
+      </p>
+      <div class="field">
+        <label class="field-label">Phone or email</label>
+        <input id="create-contact" type="text" placeholder="you@email.com or +1…" class="field-input" />
+      </div>
+      <button type="button" class="pay-stub" id="create-go" style="margin-top:12px">
+        Create account
+        <span class="subline">Then join membership to skip guest fee</span>
+      </button>
+      <p class="footer-note"><a href="#hub">← Account menu</a> · <a href="#join">Skip to Join $1.99</a></p>
+    </section>
+
+    <!-- MEMBER STATUS -->
+    <section id="view-status" class="co-machine hidden">
+      <div class="banner ok">You're a Member</div>
+      <p style="font-size:14px;margin:10px 0">Logged in as <strong id="status-contact"></strong></p>
+      <p style="font-size:13px;color:var(--muted);line-height:1.45">
+        $1.99/mo · first month free active · no guest fee on machine checkout · rewards stub
+      </p>
+      <a class="pay-stub" href="/" style="display:block;text-align:center;text-decoration:none;margin-top:14px">
+        Back to machine
+        <span class="subline">Shop as Member · top-right shows your initial</span>
+      </a>
+      <button type="button" class="btn btn-ghost btn-block" id="status-out" style="margin-top:10px">Sign out</button>
+    </section>
+  </div>
+  <script src="/js/api.js"></script>
+  <script src="/js/session.js"></script>
+  <script src="/js/member.js"></script>
+</body>
+</html>

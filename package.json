@@ -1,0 +1,14 @@
+{
+  "name": "vendiport-beta",
+  "version": "0.1.0",
+  "private": true,
+  "description": "VendiPort beta — virtual vending machine for sealed trading cards (local same-day tote).",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "reset-data": "node -e \"const fs=require('fs');const p=require('path');const d=process.env.DATA_DIR||'data';fs.mkdirSync(d,{recursive:true});fs.writeFileSync(p.join(d,'orders.json'),'[]\\n');\""
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

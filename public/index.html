@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#07090d" />
+  <title>VendiPort — Virtual Machine</title>
+  <link rel="stylesheet" href="/css/app.css" />
+  <link rel="stylesheet" href="/css/machine.css" />
+</head>
+<body class="machine-body">
+  <div class="app">
+    <!-- BROWSE -->
+    <section id="view-browse">
+      <header class="marquee marquee-account">
+        <div class="brand-row brand-row-spread">
+          <div class="brand-left">
+            <div class="brand-mark">V</div>
+            <div class="name">VendiPort</div>
+          </div>
+          <div id="account-chip" class="account-chip"></div>
+        </div>
+        <div class="tag">VIRTUAL MACHINE</div>
+        <div class="leds" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+      </header>
+      <div class="stream-wrap">
+        <div class="panel-label">Buyer stream</div>
+        <div id="buyer-stream-browse" class="vp-stream"></div>
+      </div>
+      <div class="machine">
+        <div class="machine-glass-pane">
+          <div class="slot-grid" id="product-list"></div>
+        </div>
+        <div class="machine-tray" aria-hidden="true"></div>
+      </div>
+      <p class="machine-note">Sealed boxes behind glass · push a lit tab to select · source stays hidden</p>
+    </section>
+
+    <!-- CHECKOUT -->
+    <section id="view-checkout" class="hidden">
+      <header class="marquee marquee-account">
+        <div class="brand-row brand-row-spread">
+          <div class="brand-left">
+            <div class="brand-mark">V</div>
+            <div class="name">VendiPort</div>
+          </div>
+          <div class="account-chip"></div>
+        </div>
+        <div class="tag">CHECKOUT BAY</div>
+        <div class="leds" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+      </header>
+      <button type="button" class="back" id="back-browse">← Machine</button>
+      <div class="stream-wrap">
+        <div class="panel-label">Buyer stream</div>
+        <div id="buyer-stream-checkout" class="vp-stream"></div>
+      </div>
+
+      <div class="co-machine">
+        <div class="co-hero">
+          <div class="glass-window" id="co-glass">
+            <span class="bracket tl"></span><span class="bracket tr"></span>
+            <span class="bracket bl"></span><span class="bracket br"></span>
+            <div class="glass-inner" id="co-visual"></div>
+          </div>
+          <div class="co-hero-copy">
+            <h2 id="co-title"></h2>
+            <p class="sub" id="co-sub"></p>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-label">Order total</div>
+          <div class="line"><span class="muted">Sealed product</span><span id="co-order"></span></div>
+          <div class="line"><span class="muted">Delivery flat fee (avg courier)</span><span id="co-delivery"></span></div>
+          <div class="line hidden" id="co-guest-line"><span class="muted">Guest fee (+0.5%)</span><span id="co-guest"></span></div>
+          <div class="line total"><span>Due now</span><span id="co-due"></span></div>
+        </div>
+
+        <div class="panel" id="member-status-panel">
+          <div class="panel-label">Account</div>
+          <p id="member-status-line" style="font-size:13px;margin:0;line-height:1.4">Guest +0.5% — <a href="/account">Sign in / Join</a> (top right)</p>
+        </div>
+
+        <div class="panel">
+          <div class="panel-label">Delivery window</div>
+          <div class="windows" id="window-chips"></div>
+        </div>
+
+        <div class="panel alert">
+          <div class="panel-label" style="color:#ff8a8a">Cancel until pickup</div>
+          <p style="font-size:12px;color:var(--muted);line-height:1.45;margin:0">
+            You can cancel until the driver picks up. Fee: <strong style="color:#ffb4b4">15% of product</strong>
+            (shop 7.5% / VendiPort 7.5%). Delivery fee refunded if not picked up.
+            After pickup — cancel closed. Seal / tote-bag QR refuse = full refund only carve-out.
+          </p>
+        </div>
+
+        <p class="footer-note" id="min-order-note" style="text-align:left;margin:0 0 10px">PRD min $75 delivery · demo prices may be lower · ~15% platform take · membership via top-right account · before checkout</p>
+        <button type="button" class="pay-stub" id="pay-btn">
+          <span id="co-total-btn">Pay</span>
+          <span class="subline" id="co-total-sub">Pay stub · no real Stripe</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- PAID -->
+    <section id="view-paid" class="hidden">
+      <header class="marquee marquee-account">
+        <div class="brand-row brand-row-spread">
+          <div class="brand-left">
+            <div class="brand-mark">V</div>
+            <div class="name">VendiPort</div>
+          </div>
+          <div class="account-chip"></div>
+        </div>
+        <div class="tag">ORDER LOCKED</div>
+        <div class="leds" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+      </header>
+      <div class="stream-wrap">
+        <div class="panel-label">Order stream</div>
+        <div id="buyer-stream-paid" class="vp-stream"></div>
+      </div>
+
+      <div class="co-machine">
+        <div class="packing-pulse" id="paid-pulse">
+          <span class="dot"></span>
+          <span id="paid-pulse-text">Shop is packing your sealed tote…</span>
+        </div>
+
+        <div class="co-hero">
+          <div class="glass-window">
+            <span class="bracket tl"></span><span class="bracket tr"></span>
+            <span class="bracket bl"></span><span class="bracket br"></span>
+            <div class="glass-inner" id="paid-visual"></div>
+          </div>
+          <div class="co-hero-copy">
+            <div class="row-between" style="margin-bottom:8px">
+              <span class="status-tag PAID" id="paid-status">PAID</span>
+              <span class="last4">Last-4 <span id="paid-last4"></span></span>
+            </div>
+            <h2 id="paid-title"></h2>
+            <p class="mono" style="margin-top:6px">Window: <span id="paid-window"></span></p>
+            <p class="mono">Total: <span id="paid-total"></span></p>
+            <p class="order-id-chip" style="margin-top:8px">Order <span id="paid-id"></span></p>
+          </div>
+        </div>
+
+        <div class="panel alert">
+          <p style="font-size:12px;line-height:1.45;margin:0" id="paid-cancel-copy"></p>
+          <button type="button" class="btn btn-ghost btn-block btn-sm" id="paid-cancel-btn" style="margin-top:10px">Cancel order (15% fee)</button>
+        </div>
+
+        <div class="panel">
+          <div class="panel-label">Door handoff · tote-bag QR</div>
+          <p style="font-size:12px;color:var(--muted);margin:0 0 6px">After pickup, open this link. Scan or upload the <strong>QR on your tote bag</strong> to accept (or refuse if seal/QR fail).</p>
+          <a class="handoff-link-box" id="paid-handoff" href="#"></a>
+          <p class="footer-note" style="text-align:left;margin-top:8px">Fulfillment: <a href="/shop">/shop</a></p>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script src="/js/api.js"></script>
+  <script src="/js/session.js"></script>
+  <script src="/js/buyer.js"></script>
+</body>
+</html>

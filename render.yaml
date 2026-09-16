@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: vendiport-beta
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm install --omit=dev
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: HOST
+        value: "0.0.0.0"
+      # PORT is set automatically by Render
+      # Free disk is ephemeral — orders/products may reset on redeploy/restart
