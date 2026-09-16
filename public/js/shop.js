@@ -45,6 +45,7 @@ async function init() {
 
   qs('#inv-add').addEventListener('click', addProduct);
   qs('#win-add').addEventListener('click', addWindow);
+  wireInventoryCapture();
 
   // deep link
   if (location.pathname.includes('inventory')) switchTab('inventory');
@@ -82,6 +83,7 @@ function switchTab(name) {
     : name === 'inventory' ? 'Upload sealed SKUs to the anonymous machine'
     : name === 'windows' ? 'Shop delivery windows · own-driver toggle'
     : 'Orders today · units listed · own-driver';
+  if (name !== 'inventory') stopBarcodeScan();
   if (name === 'inventory') loadInventory();
   if (name === 'windows') loadWindows();
   if (name === 'stats') loadStats();
@@ -332,7 +334,7 @@ async function loadInventory() {
             <strong style="font-size:14px">${escapeHtml(p.title)}</strong>
             ${p.hidden ? '<span class="status-tag CANCELLED">HIDDEN</span>' : '<span class="status-tag READY">LIVE</span>'}
           </div>
-          <div class="mono">${escapeHtml(p.category)} · ${money(p.price)} · ${earliest ? earliest.units + ' @ ' + earliest.label : 'no window'}</div>
+          <div class="mono">${escapeHtml(p.category)} · ${money(p.price)} · ${earliest ? earliest.units + ' @ ' + earliest.label : 'no window'}${p.barcode ? ' · barcode ' + escapeHtml(p.barcode) : ''}</div>
         </div>
       </div>
       <div class="inv-actions">
@@ -367,9 +369,166 @@ async function loadInventory() {
   }
 }
 
+let invSelectedFile = null;
+let invBarcodeStream = null;
+let invBarcodeTimer = null;
+
+function wireInventoryCapture() {
+  const camBtn = qs('#inv-cam-btn');
+  const galBtn = qs('#inv-gallery-btn');
+  const barBtn = qs('#inv-barcode-btn');
+  const camInput = qs('#inv-file-cam');
+  const galInput = qs('#inv-file-gallery');
+  if (!camBtn || !camInput) return;
+
+  camBtn.addEventListener('click', () => camInput.click());
+  galBtn.addEventListener('click', () => galInput.click());
+  camInput.addEventListener('change', () => onInvPhotoPicked(camInput));
+  galInput.addEventListener('change', () => onInvPhotoPicked(galInput));
+  barBtn.addEventListener('click', () => startBarcodeScan());
+}
+
+function onInvPhotoPicked(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  invSelectedFile = file;
+  const preview = qs('#inv-preview');
+  const url = URL.createObjectURL(file);
+  preview.src = url;
+  preview.classList.add('on');
+  // Autofocus title after photo
+  const title = qs('#inv-title');
+  if (title) {
+    setTimeout(() => title.focus(), 50);
+  }
+  toast('Photo ready — confirm title, price & windows');
+}
+
+function setLinkedBarcode(code) {
+  const raw = String(code || '').trim();
+  qs('#inv-barcode').value = raw;
+  const pill = qs('#inv-barcode-pill');
+  const label = qs('#inv-barcode-label');
+  if (!raw) {
+    pill.classList.add('hidden');
+    return;
+  }
+  label.textContent = raw;
+  pill.classList.remove('hidden');
+  // Suggest placeholder only — do not invent a product name
+  const title = qs('#inv-title');
+  if (title && !title.value.trim()) {
+    title.placeholder = `Barcode ${raw} — confirm box title`;
+  }
+  title.focus();
+  toast('Barcode linked — confirm/edit title');
+}
+
+function stopBarcodeScan() {
+  if (invBarcodeTimer) {
+    clearInterval(invBarcodeTimer);
+    invBarcodeTimer = null;
+  }
+  if (invBarcodeStream) {
+    invBarcodeStream.getTracks().forEach((tr) => tr.stop());
+    invBarcodeStream = null;
+  }
+  const stage = qs('#inv-barcode-stage');
+  if (stage) stage.classList.remove('on');
+  const video = qs('#inv-barcode-video');
+  if (video) video.srcObject = null;
+}
+
+async function ensureJsQR() {
+  if (window.jsQR) return true;
+  await new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
+    s.onload = resolve;
+    s.onerror = reject;
+    document.head.appendChild(s);
+  });
+  return !!window.jsQR;
+}
+
+async function startBarcodeScan() {
+  const status = qs('#inv-barcode-status');
+  const stage = qs('#inv-barcode-stage');
+  const video = qs('#inv-barcode-video');
+  status.classList.remove('hidden');
+  stopBarcodeScan();
+
+  try {
+    invBarcodeStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' } },
+      audio: false,
+    });
+  } catch (err) {
+    status.textContent = 'Camera blocked — type barcode manually or use photo.';
+    const manual = prompt('Enter barcode / UPC from the box');
+    if (manual) setLinkedBarcode(manual);
+    return;
+  }
+
+  stage.classList.add('on');
+  video.srcObject = invBarcodeStream;
+  await video.play();
+  status.textContent = 'Aim at barcode on the box…';
+
+  if ('BarcodeDetector' in window) {
+    let detector;
+    try {
+      detector = new BarcodeDetector({
+        formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'qr_code', 'itf'],
+      });
+    } catch {
+      detector = new BarcodeDetector();
+    }
+    invBarcodeTimer = setInterval(async () => {
+      try {
+        const codes = await detector.detect(video);
+        if (codes && codes[0] && codes[0].rawValue) {
+          setLinkedBarcode(codes[0].rawValue);
+          status.textContent = 'Barcode linked';
+          stopBarcodeScan();
+        }
+      } catch (_) {}
+    }, 400);
+    return;
+  }
+
+  // Fallback: jsQR (QR) + canvas frame; for 1D offer manual entry tip
+  status.textContent = 'BarcodeDetector unavailable — trying QR fallback (or enter UPC manually)…';
+  try {
+    await ensureJsQR();
+  } catch {
+    status.textContent = 'No barcode engine — enter code manually.';
+    const manual = prompt('Enter barcode / UPC from the box');
+    if (manual) setLinkedBarcode(manual);
+    stopBarcodeScan();
+    return;
+  }
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  invBarcodeTimer = setInterval(() => {
+    if (!video.videoWidth) return;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0);
+    const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const code = window.jsQR(data.data, data.width, data.height);
+    if (code && code.data) {
+      setLinkedBarcode(code.data);
+      status.textContent = 'Code linked (QR fallback)';
+      stopBarcodeScan();
+    }
+  }, 500);
+}
+
 async function addProduct() {
   const title = qs('#inv-title').value.trim();
-  if (!title) return toast('Title required');
+  if (!title) return toast('Title required — confirm the box name');
+  const barcode = (qs('#inv-barcode') && qs('#inv-barcode').value.trim()) || '';
   const body = {
     title,
     subtitle: qs('#inv-sub').value.trim() || 'Sealed · Demo price — confirm with shop',
@@ -378,10 +537,13 @@ async function addProduct() {
     units: Number(qs('#inv-units').value),
     windowLabel: qs('#inv-window').value.trim() || 'Today 4-6pm',
     imageUrl: qs('#inv-url').value.trim() || null,
+    barcode: barcode || null,
   };
   try {
     const { product } = await api('/api/products', { method: 'POST', body: JSON.stringify(body) });
-    const file = qs('#inv-file').files[0];
+    const file = invSelectedFile
+      || (qs('#inv-file-cam').files && qs('#inv-file-cam').files[0])
+      || (qs('#inv-file-gallery').files && qs('#inv-file-gallery').files[0]);
     if (file) {
       const fd = new FormData();
       fd.append('productId', product.id);
@@ -391,12 +553,28 @@ async function addProduct() {
       if (!res.ok) throw new Error(data.error || 'Upload failed');
     }
     toast('Product live on machine');
-    qs('#inv-title').value = '';
-    qs('#inv-file').value = '';
+    resetInventoryForm();
     loadInventory();
   } catch (err) {
     toast(err.message);
   }
+}
+
+function resetInventoryForm() {
+  stopBarcodeScan();
+  invSelectedFile = null;
+  qs('#inv-title').value = '';
+  qs('#inv-title').placeholder = 'Confirm box title (shop edits)';
+  qs('#inv-sub').value = '';
+  qs('#inv-url').value = '';
+  qs('#inv-barcode').value = '';
+  qs('#inv-barcode-pill').classList.add('hidden');
+  qs('#inv-preview').classList.remove('on');
+  qs('#inv-preview').removeAttribute('src');
+  qs('#inv-file-cam').value = '';
+  qs('#inv-file-gallery').value = '';
+  qs('#inv-barcode-status').classList.add('hidden');
+  qs('#inv-barcode-status').textContent = '';
 }
 
 async function loadWindows() {

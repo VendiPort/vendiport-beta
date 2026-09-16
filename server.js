@@ -399,6 +399,7 @@ async function handleApi(req, res, pathname) {
           emoji: p.emoji,
           tile: p.tile || null,
           image: p.image || null,
+          barcode: p.barcode || null,
           hidden: !!p.hidden,
           earliestWindow: earliest
             ? { id: earliest.id, label: earliest.label, units: earliest.units }
@@ -438,6 +439,7 @@ async function handleApi(req, res, pathname) {
       image = null;
     }
 
+    const barcode = body.barcode != null ? String(body.barcode).trim() : '';
     const product = {
       id,
       title,
@@ -447,6 +449,7 @@ async function handleApi(req, res, pathname) {
       emoji: body.emoji || emojiForCategory(category),
       tile: String(body.tile || title.replace(/[^A-Za-z0-9]/g, '').slice(0, 4).toUpperCase() || 'SKU'),
       image: image || null,
+      barcode: barcode || null,
       hidden: false,
       windows: buildProductWindows(body, units, windowLabel),
     };
@@ -496,6 +499,7 @@ async function handleApi(req, res, pathname) {
       product.image = img || null;
     }
     if (body.emoji != null) product.emoji = String(body.emoji);
+    if (body.barcode != null) product.barcode = String(body.barcode).trim() || null;
     if (body.units != null || body.windowLabel != null) {
       const units = body.units != null ? Math.max(0, parseInt(body.units, 10) || 0) : null;
       if (!product.windows || !product.windows.length) {

@@ -23,6 +23,36 @@
     .inv-row { display:grid; grid-template-columns:48px 1fr; gap:10px; align-items:center; }
     .inv-actions { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
     .money-strip { font-size:11px; color:#8b95a8; line-height:1.4; margin:8px 0 12px; padding:10px; border:1px solid #2a3344; border-radius:10px; }
+    .inv-photo-block {
+      border:1px solid rgba(232,74,74,0.45); border-radius:14px; padding:12px;
+      background:linear-gradient(180deg,#161a22,#0e1218); margin-bottom:14px;
+      box-shadow:0 0 18px rgba(232,74,74,0.12);
+    }
+    .inv-photo-preview {
+      width:100%; aspect-ratio:1; max-height:220px; object-fit:cover; border-radius:12px;
+      background:#0a0c10; display:none; margin-bottom:10px; border:1px solid #2a3344;
+    }
+    .inv-photo-preview.on { display:block; }
+    .inv-cta-row { display:flex; flex-direction:column; gap:8px; }
+    .inv-cta-row .btn { min-height:48px; font-size:15px; }
+    .inv-secondary-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px; }
+    .inv-secondary-row .btn { min-height:44px; font-size:13px; }
+    .field.touch input, .field.touch select {
+      min-height:48px; font-size:16px; padding:12px 14px;
+    }
+    .barcode-pill {
+      display:inline-flex; align-items:center; gap:6px; margin-top:8px;
+      padding:8px 10px; border-radius:999px; font-size:12px; font-weight:700;
+      background:rgba(46,196,182,0.12); color:#2ec4b6; border:1px solid rgba(46,196,182,0.4);
+    }
+    .barcode-pill.hidden { display:none; }
+    #inv-barcode-stage {
+      margin-top:10px; border-radius:12px; overflow:hidden; border:1px solid #2a3344;
+      background:#000; display:none; position:relative;
+    }
+    #inv-barcode-stage.on { display:block; }
+    #inv-barcode-video { width:100%; max-height:220px; display:block; }
+    #inv-barcode-status { font-size:11px; color:#8b95a8; margin-top:6px; }
   </style>
 </head>
 <body class="shop-body">
@@ -73,18 +103,45 @@
     <section id="tab-inventory" class="hidden">
       <div class="card">
         <div class="step-label">Add sealed product</div>
-        <p class="sub" style="margin-bottom:10px">Appears on anonymous buyer machine — never show shop name.</p>
-        <div class="field"><label>Title</label><input id="inv-title" placeholder="2022 Panini Example Football" /></div>
-        <div class="field"><label>Subtitle / config</label><input id="inv-sub" placeholder="Sealed blaster · Demo price — confirm with shop" /></div>
-        <div class="field"><label>Category</label>
+        <p class="sub" style="margin-bottom:12px">
+          Snap the sealed box — then price &amp; windows. Buyer sees the photo behind glass.
+          Shop name never shown on the machine.
+        </p>
+
+        <div class="inv-photo-block">
+          <div class="panel-label" style="margin-bottom:8px">1 · Photo and/or barcode first</div>
+          <img id="inv-preview" class="inv-photo-preview" alt="Box preview" />
+          <div class="inv-cta-row">
+            <button type="button" class="btn btn-red btn-block" id="inv-cam-btn">📷 Take photo of box</button>
+          </div>
+          <div class="inv-secondary-row">
+            <button type="button" class="btn btn-ghost" id="inv-gallery-btn">Choose from gallery</button>
+            <button type="button" class="btn btn-teal" id="inv-barcode-btn">Scan barcode</button>
+          </div>
+          <input type="file" id="inv-file-cam" accept="image/*" capture="environment" class="hidden" />
+          <input type="file" id="inv-file-gallery" accept="image/*" class="hidden" />
+          <div id="inv-barcode-pill" class="barcode-pill hidden">Barcode linked · <span id="inv-barcode-label"></span></div>
+          <input type="hidden" id="inv-barcode" value="" />
+          <div id="inv-barcode-stage">
+            <video id="inv-barcode-video" playsinline muted></video>
+          </div>
+          <p id="inv-barcode-status" class="hidden"></p>
+          <p class="footer-note" style="text-align:left;margin-top:8px">
+            Barcode stores the raw code only — confirm/edit the title yourself (no product lookup).
+          </p>
+        </div>
+
+        <div class="panel-label" style="margin-bottom:8px">2 · Title, price &amp; windows</div>
+        <div class="field touch"><label>Title</label><input id="inv-title" placeholder="Confirm box title (shop edits)" autocomplete="off" /></div>
+        <div class="field touch"><label>Subtitle / config</label><input id="inv-sub" placeholder="Sealed blaster · Demo price — confirm with shop" /></div>
+        <div class="field touch"><label>Category</label>
           <select id="inv-cat"><option>Football</option><option>Baseball</option><option>Wrestling</option><option>Hockey</option><option>Other</option></select>
         </div>
-        <div class="field"><label>Price ($)</label><input id="inv-price" type="number" min="0" step="1" value="40" /></div>
-        <div class="field"><label>Units (earliest / primary window)</label><input id="inv-units" type="number" min="0" step="1" value="2" /></div>
-        <div class="field"><label>Primary window label</label><input id="inv-window" value="Today 4-6pm" /></div>
-        <div class="field"><label>Image URL (optional)</label><input id="inv-url" placeholder="/img/products/….jpg or https://…" /></div>
-        <div class="field"><label>Or upload image</label><input id="inv-file" type="file" accept="image/*" /></div>
-        <button type="button" class="btn btn-red btn-block" id="inv-add">Add to machine</button>
+        <div class="field touch"><label>Price ($)</label><input id="inv-price" type="number" min="0" step="1" inputmode="decimal" value="40" /></div>
+        <div class="field touch"><label>Units (earliest / primary window)</label><input id="inv-units" type="number" min="0" step="1" inputmode="numeric" value="2" /></div>
+        <div class="field touch"><label>Primary window label</label><input id="inv-window" value="Today 4-6pm" /></div>
+        <div class="field"><label>Image URL (optional fallback)</label><input id="inv-url" placeholder="/img/products/….jpg or https://…" /></div>
+        <button type="button" class="btn btn-red btn-block" id="inv-add" style="min-height:52px;font-size:16px;margin-top:6px">Add to machine</button>
       </div>
       <div id="inv-list"></div>
     </section>
