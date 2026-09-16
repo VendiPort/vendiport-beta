@@ -50,6 +50,7 @@ async function init() {
   if (location.pathname.includes('inventory')) switchTab('inventory');
   else if (location.hash === '#windows') switchTab('windows');
   else if (location.hash === '#inventory') switchTab('inventory');
+  else if (location.hash === '#stats') switchTab('stats');
 
   await refreshJobs();
   setInterval(() => { if (tab === 'jobs') refreshJobs(); }, 4000);
@@ -72,13 +73,43 @@ function switchTab(name) {
   qs('#tab-jobs').classList.toggle('hidden', name !== 'jobs');
   qs('#tab-inventory').classList.toggle('hidden', name !== 'inventory');
   qs('#tab-windows').classList.toggle('hidden', name !== 'windows');
-  qs('#page-title').textContent = name === 'jobs' ? 'Jobs' : name === 'inventory' ? 'Inventory' : 'Windows';
+  const statsEl = qs('#tab-stats');
+  if (statsEl) statsEl.classList.toggle('hidden', name !== 'stats');
+  qs('#page-title').textContent =
+    name === 'jobs' ? 'Jobs' : name === 'inventory' ? 'Inventory' : name === 'windows' ? 'Windows' : 'Stats';
   qs('#page-sub').textContent =
     name === 'jobs' ? 'Shop stream: PAID → pack → seal → READY → pickup → done'
     : name === 'inventory' ? 'Upload sealed SKUs to the anonymous machine'
-    : 'Shop delivery windows · own-driver toggle';
+    : name === 'windows' ? 'Shop delivery windows · own-driver toggle'
+    : 'Orders today · units listed · own-driver';
   if (name === 'inventory') loadInventory();
   if (name === 'windows') loadWindows();
+  if (name === 'stats') loadStats();
+}
+
+async function loadStats() {
+  const body = qs('#stats-body');
+  if (!body) return;
+  try {
+    const { stats } = await api('/api/stats');
+    const rows = Object.keys(stats.byStatus || {}).sort()
+      .map((k) => `<div class="line"><span class="muted">${escapeHtml(k)}</span><span>${stats.byStatus[k]}</span></div>`)
+      .join('') || '<div class="line"><span class="muted">No orders today</span><span>0</span></div>';
+    body.innerHTML = `
+      <div class="panel" style="margin:0">
+        <div class="panel-label">${escapeHtml(stats.date)} · ${escapeHtml(stats.shopName || 'Shop')}</div>
+        <div class="line total"><span>Orders today</span><span>${stats.ordersToday}</span></div>
+        ${rows}
+        <div class="line"><span class="muted">Active jobs (open)</span><span>${stats.activeJobs}</span></div>
+        <div class="line"><span class="muted">SKUs live on machine</span><span>${stats.skusLive}</span></div>
+        <div class="line"><span class="muted">Units listed</span><span>${stats.unitsListed}</span></div>
+        <div class="line"><span class="muted">Own-driver</span><span>${stats.ownDriver ? 'ON' : 'OFF'}</span></div>
+      </div>
+      <p class="footer-note" style="text-align:left;margin-top:10px">${escapeHtml(stats.note || '')}</p>
+    `;
+  } catch (err) {
+    body.innerHTML = `<div class="empty">${escapeHtml(err.message || 'Stats failed')}</div>`;
+  }
 }
 
 async function refreshJobs() {

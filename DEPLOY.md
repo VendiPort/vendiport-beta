@@ -1,3 +1,5 @@
+**Live:** https://vendiport-beta.onrender.com · Repo: [VendiPort/vendiport-beta](https://github.com/VendiPort/vendiport-beta) · auto-deploy from `main`.
+
 # Deploy VendiPort beta (free)
 
 Zero runtime deps. Binds `0.0.0.0`, respects `PORT`, health at `/health`.
@@ -18,8 +20,8 @@ Zero runtime deps. Binds `0.0.0.0`, respects `PORT`, health at `/health`.
    - **Start:** `npm start`  (`node server.js`)
    - **Health Check Path:** `/health`
    - **Plan:** Free
-3. Deploy. Open `https://<your-service>.onrender.com/health` → `{"ok":true}`.
-4. Smoke: `/` (machine), `/shop`, `/account`, `/handoff/<orderId>`.
+3. Deploy. Open `https://vendiport-beta.onrender.com/health` → `{"ok":true}`.
+4. Smoke: `/` (machine), `/track/<orderId>`, `/shop` (incl. Stats), `/account`, `/handoff/<orderId>`.
 
 Cold starts on free tier can take ~30–60s after idle.
 

@@ -34,6 +34,7 @@
         <div class="machine-tray" aria-hidden="true"></div>
       </div>
       <p class="machine-note">Sealed boxes behind glass · push a lit tab to select · source stays hidden</p>
+      <p class="footer-note">Live beta · <a href="https://vendiport-beta.onrender.com">vendiport-beta.onrender.com</a></p>
     </section>
 
     <!-- CHECKOUT -->
@@ -151,6 +152,12 @@
         </div>
 
         <div class="panel">
+          <div class="panel-label">Track order (survives refresh)</div>
+          <p style="font-size:12px;color:var(--muted);margin:0 0 6px">Bookmark this link — Paid → Packing → Ready → Out → Arrive → Scan tote QR.</p>
+          <a class="handoff-link-box" id="paid-track" href="#"></a>
+        </div>
+
+        <div class="panel">
           <div class="panel-label">Door handoff · tote-bag QR</div>
           <p style="font-size:12px;color:var(--muted);margin:0 0 6px">After pickup, open this link. Scan or upload the <strong>QR on your tote bag</strong> to accept (or refuse if seal/QR fail).</p>
           <a class="handoff-link-box" id="paid-handoff" href="#"></a>
@@ -158,6 +165,10 @@
         </div>
       </div>
     </section>
+
+    <p class="footer-note" style="margin-top:16px">
+      Live beta: <a href="https://vendiport-beta.onrender.com" rel="noopener">vendiport-beta.onrender.com</a>
+    </p>
   </div>
   <script src="/js/api.js"></script>
   <script src="/js/session.js"></script>

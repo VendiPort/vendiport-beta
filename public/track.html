@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#07090d" />
+  <title>VendiPort — Track order</title>
+  <link rel="stylesheet" href="/css/app.css" />
+  <link rel="stylesheet" href="/css/machine.css" />
+</head>
+<body class="machine-body">
+  <div class="app">
+    <header class="marquee marquee-account">
+      <div class="brand-row brand-row-spread">
+        <div class="brand-left">
+          <div class="brand-mark">V</div>
+          <div class="name">VendiPort</div>
+        </div>
+        <div id="account-chip" class="account-chip"></div>
+      </div>
+      <div class="tag">TRACK ORDER</div>
+      <div class="leds" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+    </header>
+
+    <p class="sub"><a class="back" href="/">← Machine</a></p>
+
+    <div class="stream-wrap">
+      <div class="panel-label">Order stream</div>
+      <div id="track-stream" class="vp-stream"></div>
+    </div>
+
+    <div id="track-body">
+      <div class="empty">Loading order…</div>
+    </div>
+
+    <p class="footer-note">
+      Live beta: <a href="https://vendiport-beta.onrender.com" rel="noopener">vendiport-beta.onrender.com</a>
+      · free-tier disk may reset
+    </p>
+  </div>
+  <script src="/js/api.js"></script>
+  <script src="/js/session.js"></script>
+  <script src="/js/track.js"></script>
+</body>
+</html>

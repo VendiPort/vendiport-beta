@@ -194,6 +194,8 @@ function serveStatic(req, res, urlPath) {
   if (rel === '/shop' || rel === '/shop/' || rel === '/shop/inventory' || rel === '/shop/inventory/') rel = '/shop.html';
   if (rel === '/member' || rel === '/member/' || rel === '/login' || rel === '/login/' || rel === '/join' || rel === '/join/' || rel === '/account' || rel === '/account/') rel = '/member.html';
   if (rel.startsWith('/handoff/')) rel = '/handoff.html';
+  if (rel.startsWith('/track/') || rel.startsWith('/order/')) rel = '/track.html';
+  if (rel === '/track' || rel === '/order') rel = '/track.html';
 
   const filePath = path.normalize(path.join(PUBLIC, rel));
   if (!filePath.startsWith(PUBLIC)) {
@@ -653,11 +655,43 @@ async function handleApi(req, res, pathname) {
   }
 
   // GET /api/orders/:id
-  if (method === 'GET' && pathname.startsWith('/api/orders/')) {
-    const id = pathname.slice('/api/orders/'.length).split('/')[0];
+  if (method === 'GET' && /^\/api\/orders\/[^/]+$/.test(pathname)) {
+    const id = pathname.slice('/api/orders/'.length);
     const order = findOrder(id);
     if (!order) return sendError(res, 404, 'Order not found');
     return send(res, 200, { order: publicOrder(order) });
+  }
+
+  // GET /api/stats — shop demo stats (JSON-backed)
+  if (method === 'GET' && pathname === '/api/stats') {
+    const shop = getPrimaryShop();
+    const orders = readJson('orders.json', []);
+    const products = readJson('products.json', []);
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    const startIso = start.toISOString();
+    const today = orders.filter((o) => (o.createdAt || o.updatedAt || '') >= startIso);
+    const byStatus = {};
+    for (const o of today) {
+      byStatus[o.status] = (byStatus[o.status] || 0) + 1;
+    }
+    const unitsListed = products
+      .filter((p) => !p.hidden)
+      .reduce((sum, p) => sum + (p.windows || []).reduce((s, w) => s + (Number(w.units) || 0), 0), 0);
+    const skusLive = products.filter((p) => !p.hidden).length;
+    return send(res, 200, {
+      stats: {
+        date: startIso.slice(0, 10),
+        ordersToday: today.length,
+        byStatus,
+        skusLive,
+        unitsListed,
+        ownDriver: !!(shop && (shop.ownDriver || shop.customWindows)),
+        shopName: shop ? shop.name : null,
+        activeJobs: orders.filter((o) => SHOP_VISIBLE.has(o.status)).length,
+        note: 'Demo stats from local JSON — free-tier disk may reset',
+      },
+    });
   }
 
   // POST /api/orders — create DRAFT then optional immediate pay via ?pay=1 or body.pay
@@ -1018,5 +1052,6 @@ server.listen(PORT, HOST, () => {
   console.log(`  Account: http://${HOST}:${PORT}/account`);
   console.log(`  Member:  http://${HOST}:${PORT}/member`);
   console.log(`  Handoff: http://${HOST}:${PORT}/handoff/<orderId>`);
+  console.log(`  Track:   http://${HOST}:${PORT}/track/<orderId>`);
   console.log(`  Data:    ${DATA}`);
 });

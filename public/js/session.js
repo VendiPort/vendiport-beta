@@ -110,11 +110,21 @@ const BUYER_STREAM = [
   { key: 'select', label: 'Select' },
   { key: 'checkout', label: 'Checkout' },
   { key: 'paid', label: 'Paid' },
-  { key: 'pack', label: 'In pack' },
+  { key: 'pack', label: 'Packing' },
   { key: 'ready', label: 'Ready' },
   { key: 'delivery', label: 'Out' },
   { key: 'arrive', label: 'Arrive' },
-  { key: 'accept', label: 'Tote QR' },
+  { key: 'accept', label: 'Scan tote QR' },
+];
+
+/** Fulfillment-only stream (paid / track pages) */
+const TRACK_STREAM = [
+  { key: 'paid', label: 'Paid' },
+  { key: 'pack', label: 'Packing' },
+  { key: 'ready', label: 'Ready' },
+  { key: 'out', label: 'Out' },
+  { key: 'arrive', label: 'Arrive' },
+  { key: 'accept', label: 'Scan tote QR' },
 ];
 
 const SHOP_STREAM = [
@@ -145,6 +155,17 @@ function buyerStreamKeyFromOrder(order) {
   if (st === 'READY') return 'ready';
   if (st === 'PACKING') return 'pack';
   if (st === 'PAID') return 'paid';
+  return 'paid';
+}
+
+function trackStreamKeyFromOrder(order) {
+  if (!order) return 'paid';
+  const st = order.status;
+  if (st === 'CANCELLED') return 'paid';
+  if (st === 'DELIVERED_ACCEPTED' || st === 'REFUSED_SEAL') return 'accept';
+  if (st === 'PICKED_UP') return order.arrivePhotoStub ? 'arrive' : 'out';
+  if (st === 'READY') return 'ready';
+  if (st === 'PACKING') return 'pack';
   return 'paid';
 }
 

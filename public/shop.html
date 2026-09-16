@@ -44,6 +44,7 @@
       <button type="button" class="tab on" data-tab="jobs">Jobs</button>
       <button type="button" class="tab" data-tab="inventory">Inventory</button>
       <button type="button" class="tab" data-tab="windows">Windows</button>
+      <button type="button" class="tab" data-tab="stats">Stats</button>
     </div>
 
     <div class="money-strip">
@@ -104,7 +105,19 @@
       </div>
     </section>
 
-    <p class="footer-note"><a href="/">← Buyer machine</a></p>
+    <!-- STATS -->
+    <section id="tab-stats" class="hidden">
+      <div class="card" id="stats-card">
+        <div class="step-label">Today (JSON demo)</div>
+        <p class="sub" style="margin-bottom:10px">Light shop stats — free-tier disk may reset on redeploy.</p>
+        <div id="stats-body" class="empty">Loading…</div>
+      </div>
+    </section>
+
+    <p class="footer-note">
+      <a href="/">← Buyer machine</a>
+      · Live: <a href="https://vendiport-beta.onrender.com" rel="noopener">vendiport-beta.onrender.com</a>
+    </p>
   </div>
   <script src="/js/api.js"></script>
   <script src="/js/session.js"></script>

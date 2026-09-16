@@ -9,9 +9,15 @@ function membershipOn() {
 
 function paintBuyerStream(which, key) {
   const el = qs(`#buyer-stream-${which}`);
-  if (el && typeof renderProcessStream === 'function') {
-    renderProcessStream(el, BUYER_STREAM, key);
+  if (!el || typeof renderProcessStream !== 'function') return;
+  if (which === 'paid' && typeof TRACK_STREAM !== 'undefined') {
+    const k = typeof trackStreamKeyFromOrder === 'function' && window.__lastPaidOrder
+      ? trackStreamKeyFromOrder(window.__lastPaidOrder)
+      : (key === 'delivery' ? 'out' : key);
+    renderProcessStream(el, TRACK_STREAM, k);
+    return;
   }
+  renderProcessStream(el, BUYER_STREAM, key);
 }
 
 function onMemberSessionChange() {
@@ -161,7 +167,14 @@ function renderPaid(order) {
   qs('#view-checkout').classList.add('hidden');
   qs('#view-paid').classList.remove('hidden');
   renderAccountChip();
+  window.__lastPaidOrder = order;
+  try { localStorage.setItem('vendiport_last_order', order.id); } catch (_) {}
   paintBuyerStream('paid', buyerStreamKeyFromOrder(order));
+  const trackA = qs('#paid-track');
+  if (trackA) {
+    trackA.href = `/track/${order.id}`;
+    trackA.textContent = location.origin + `/track/${order.id}`;
+  }
 
   qs('#paid-visual').innerHTML = productVisual({
     image: order.productImage,
