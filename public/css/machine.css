@@ -789,7 +789,7 @@ button.acct-link {
   color: #fff;
   font-size: 1.05rem;
 }
-.marquee .name .accent-teal { color: #4fd1c5; text-shadow: 0 0 10px rgba(79,209,197,0.55); }
+.marquee .name .accent-teal { color: #4fd1c5; text-shadow: 0 0 8px rgba(79,209,197,0.75), 0 0 18px rgba(79,209,197,0.45); }
 .marquee .name .accent-coral { color: #ff5a5f; text-shadow: 0 0 10px rgba(255,90,95,0.45); }
 
 .marquee .name .name-core, .name .name-core { color: #fff; }
