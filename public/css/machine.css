@@ -781,3 +781,15 @@ button.acct-link {
   object-fit: cover;
   box-shadow: 0 0 12px rgba(255,90,95,0.35), 0 0 10px rgba(79,209,197,0.35);
 }
+
+
+.marquee .name {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #fff;
+  font-size: 1.05rem;
+}
+.marquee .name .accent-teal { color: #4fd1c5; text-shadow: 0 0 10px rgba(79,209,197,0.55); }
+.marquee .name .accent-coral { color: #ff5a5f; text-shadow: 0 0 10px rgba(255,90,95,0.45); }
+
+.marquee .name .name-core, .name .name-core { color: #fff; }
