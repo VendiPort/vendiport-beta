@@ -37,7 +37,7 @@ const MONEY_COPY = {
 };
 
 const CANCELABLE = new Set(['DRAFT', 'PAID', 'PACKING', 'READY']);
-const SHOP_VISIBLE = new Set(['PAID', 'PACKING', 'READY', 'PICKED_UP']);
+const SHOP_VISIBLE = new Set(['PAID', 'PACKING', 'READY', 'PICKED_UP', 'DELIVERED_ACCEPTED']);
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -117,6 +117,35 @@ function readBody(req) {
   });
 }
 
+
+function saveOrderImage(subdir, orderId, dataUrlOrBase64) {
+  if (!dataUrlOrBase64) return null;
+  let raw = String(dataUrlOrBase64);
+  let ext = '.jpg';
+  const m = /^data:image\/(png|jpeg|jpg|webp);base64,(.+)$/i.exec(raw);
+  let buf;
+  if (m) {
+    ext = m[1].toLowerCase() === 'png' ? '.png' : m[1].toLowerCase() === 'webp' ? '.webp' : '.jpg';
+    buf = Buffer.from(m[2], 'base64');
+  } else {
+    buf = Buffer.from(raw.replace(/\s/g, ''), 'base64');
+  }
+  if (!buf.length || buf.length > 8 * 1024 * 1024) return null;
+  const dir = path.join(PUBLIC, 'img', subdir);
+  fs.mkdirSync(dir, { recursive: true });
+  const fname = `${orderId}-${Date.now()}${ext}`;
+  fs.writeFileSync(path.join(dir, fname), buf);
+  return `/img/${subdir}/${fname}`;
+}
+
+function saveConfirmImage(orderId, dataUrlOrBase64) {
+  return saveOrderImage('confirmations', orderId, dataUrlOrBase64);
+}
+
+function savePackImage(orderId, dataUrlOrBase64) {
+  return saveOrderImage('pack', orderId, dataUrlOrBase64);
+}
+
 function last4(id) {
   const s = String(id || '');
   return s.slice(-4).toUpperCase();
@@ -151,7 +180,12 @@ function publicOrder(o) {
     handoffUrl: `/handoff/${o.id}`,
     toteQrPayload: o.toteQrPayload || `VENDIPORT:ORDER:${o.id}`,
     qrVerified: !!o.qrVerified,
+    confirmImage: o.confirmImage || null,
+    confirmedAt: o.confirmedAt || o.acceptedAt || null,
+    matchedToteQr: o.matchedToteQr || o.qrScannedPayload || null,
     packPhotoStub: !!o.packPhotoStub,
+    packPhoto: o.packPhoto || null,
+    toteQrFromPackPhoto: !!o.toteQrFromPackPhoto,
     sealConfirmed: !!o.sealConfirmed,
     arrivePhotoStub: !!o.arrivePhotoStub,
     approveUnlocked: !!(o.arrivePhotoStub || o.status === 'PICKED_UP' || o.status === 'DELIVERED_ACCEPTED' || o.status === 'REFUSED_SEAL'),
@@ -757,7 +791,7 @@ async function handleApi(req, res, pathname) {
     return transition(res, id, 'PAID', 'PACKING');
   }
 
-  // POST /api/orders/:id/pack-photo — stub: product in tote + pre-printed tote QR in frame
+  // POST /api/orders/:id/pack-photo — pack image + QR in frame = transaction identity
   if (method === 'POST' && /^\/api\/orders\/[^/]+\/pack-photo$/.test(pathname)) {
     const id = pathname.split('/')[3];
     const order = findOrder(id);
@@ -767,17 +801,40 @@ async function handleApi(req, res, pathname) {
     }
     const body = await readBody(req);
     if (order.status === 'PAID') order.status = 'PACKING';
-    order.packPhotoStub = true;
-    order.packPhotoNote =
-      'Stub: put product in tote → photo with pre-printed tote-bag QR visible in frame (camera not wired).';
-    if (body && body.toteQrPayload) {
-      order.toteQrPayload = String(body.toteQrPayload).trim();
-      order.toteQrLinkedAt = new Date().toISOString();
+
+    const packPath = savePackImage(
+      order.id,
+      (body && (body.packImage || body.packImageBase64 || body.imageDataUrl)) || null
+    );
+    if (packPath) {
+      order.packPhoto = packPath;
+      order.packPhotoStub = true;
+      order.packPhotoNote = 'Pack photo saved — tote QR in frame is transaction identity.';
+    } else {
+      // Demo stub without camera (local/API tests)
+      order.packPhotoStub = true;
+      order.packPhotoNote =
+        'Demo stub pack photo (no image). Reshoot with tote QR in frame for real identity.';
     }
-    if (!order.toteQrPayload) order.toteQrPayload = `VENDIPORT:ORDER:${order.id}`;
+
+    const detected = body && body.toteQrPayload ? String(body.toteQrPayload).trim() : '';
+    const fromPack = !!(body && (body.qrDetectedFromPack || body.fromPackPhoto));
+    if (detected) {
+      order.toteQrPayload = detected;
+      order.toteQrLinkedAt = new Date().toISOString();
+      order.toteQrFromPackPhoto = fromPack || !!packPath;
+    } else if (!order.toteQrPayload) {
+      order.toteQrPayload = `VENDIPORT:ORDER:${order.id}`;
+      order.toteQrFromPackPhoto = false;
+    }
+
     order.updatedAt = new Date().toISOString();
     saveOrder(order);
-    return send(res, 200, { order: shopOrder(order) });
+    return send(res, 200, {
+      order: shopOrder(order),
+      qrDetected: !!detected && fromPack,
+      needsManualLink: !detected || !order.toteQrFromPackPhoto,
+    });
   }
 
   // POST /api/orders/:id/assign-tote-qr — link pre-printed bag QR to this order
@@ -793,6 +850,7 @@ async function handleApi(req, res, pathname) {
     if (!payload) return sendError(res, 400, 'toteQrPayload required — scan/enter the QR printed on the tote bag');
     order.toteQrPayload = payload;
     order.toteQrLinkedAt = new Date().toISOString();
+    order.toteQrFromPackPhoto = !!(body && body.fromPackPhoto);
     order.updatedAt = new Date().toISOString();
     saveOrder(order);
     return send(res, 200, { order: shopOrder(order) });
@@ -870,7 +928,7 @@ async function handleApi(req, res, pathname) {
     return send(res, 200, { order: shopOrder(order) });
   }
 
-  // POST /api/orders/:id/accept — sale final ONLY after tote QR match
+  // POST /api/orders/:id/accept — sale final ONLY after tote QR match + confirmation image
   if (method === 'POST' && /^\/api\/orders\/[^/]+\/accept$/.test(pathname)) {
     const id = pathname.split('/')[3];
     const body = await readBody(req);
@@ -889,28 +947,40 @@ async function handleApi(req, res, pathname) {
     const expected = order.toteQrPayload || `VENDIPORT:ORDER:${order.id}`;
     const scanned = String(body.qrPayload || body.qr || '').trim();
     if (!scanned) {
-      return sendError(res, 400, 'Scan or upload the QR printed on your tote bag. Sale final only after that tote QR matches this order.');
+      return sendError(res, 400, 'Scan or upload the QR printed on your tote bag. Sale final only after that tote QR matches the shop-linked bag QR.');
     }
+    // Must match the shop-linked tote QR (original bag code)
+    const norm = (s) => String(s || '').trim().toUpperCase();
     const ok =
-      scanned === expected ||
-      scanned === order.id ||
-      scanned.includes(order.id) ||
-      scanned.toUpperCase() === `VENDIPORT:ORDER:${order.id}`.toUpperCase();
+      norm(scanned) === norm(expected) ||
+      (norm(expected).includes(norm(scanned)) && scanned.length >= 8) ||
+      (norm(scanned).includes(norm(expected)) && expected.length >= 8);
     if (!ok) {
-      return sendError(res, 409, 'QR does not match this tote bag. Scan the QR printed on your tote (last-4 ' + last4(order.id) + ').');
+      return sendError(res, 409, 'QR does not match the tote QR from the shop pack photo (last-4 ' + last4(order.id) + '). Confirm intact package and scan that same bag QR.');
     }
+    const confirmPath = saveConfirmImage(
+      order.id,
+      body.confirmImage || body.confirmImageBase64 || body.imageDataUrl || null
+    );
+    if (!confirmPath) {
+      return sendError(res, 400, 'Confirmation image required — upload a photo of the tote QR or use camera (we capture a frame). Store needs this proof.');
+    }
+    const now = new Date().toISOString();
     order.qrVerified = true;
-    order.qrScannedAt = new Date().toISOString();
+    order.qrScannedAt = now;
     order.qrScannedPayload = scanned;
+    order.matchedToteQr = expected;
+    order.confirmImage = confirmPath;
+    order.confirmedAt = now;
     order.status = 'DELIVERED_ACCEPTED';
-    order.updatedAt = order.qrScannedAt;
-    order.acceptedAt = order.updatedAt;
+    order.updatedAt = now;
+    order.acceptedAt = now;
     order.settlementStub = {
       product: order.productPrice,
       platformTake: +(order.productPrice * PLATFORM_TAKE).toFixed(2),
       shopShare: +(order.productPrice * (1 - PLATFORM_TAKE)).toFixed(2),
       deliveryFee: order.deliveryFee,
-      note: 'Sale final after tote QR match. Shop payout stub.',
+      note: 'Sale final after tote QR match + buyer confirmation image. Shop payout stub.',
     };
     saveOrder(order);
     return send(res, 200, { order: publicOrder(order) });

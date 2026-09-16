@@ -3,3 +3,8 @@ node_modules/
 *.log
 data/*.tmp
 public/img/uploads/
+
+public/img/pack/*
+!public/img/pack/.gitkeep
+public/img/confirmations/*
+!public/img/confirmations/.gitkeep

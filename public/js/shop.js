@@ -146,10 +146,18 @@ function renderJobs(orders) {
     list.innerHTML = '<div class="empty">No active PAID jobs.<br>Buyer pays on the machine first.</div>';
     return;
   }
-  // Group READY by window
+  // Group READY by window; show accepted with confirmation
   const ready = orders.filter((o) => o.status === 'READY');
-  const rest = orders.filter((o) => o.status !== 'READY');
+  const accepted = orders.filter((o) => o.status === 'DELIVERED_ACCEPTED');
+  const rest = orders.filter((o) => o.status !== 'READY' && o.status !== 'DELIVERED_ACCEPTED');
   list.innerHTML = '';
+  if (accepted.length) {
+    const headA = document.createElement('div');
+    headA.className = 'step-label';
+    headA.textContent = 'Buyer confirmed (tote QR matched)';
+    list.appendChild(headA);
+    accepted.forEach((o) => list.appendChild(jobCard(o)));
+  }
   if (ready.length) {
     const byWin = {};
     for (const o of ready) {
@@ -195,7 +203,7 @@ function jobCard(o) {
       <div class="panel-label">Pack · tote bag (QR already on bag)</div>
       <p style="font-size:12px;color:var(--muted);margin:0;line-height:1.45">
         <strong>Put product in tote → photo with tote bag QR visible in frame.</strong>
-        Bags already have a QR printed on them — no stickers. Last-4 <strong>${o.last4}</strong>.
+        That QR in the pack photo becomes this order’s identity. Last-4 <strong>${o.last4}</strong>.
       </p>
     </div>
     <div class="panel" style="margin-top:8px">
@@ -227,6 +235,34 @@ function jobCard(o) {
           <button type="button" class="btn btn-ghost btn-sm tote-link-btn" style="margin-top:6px">Link tote bag QR to order</button>
         </div>
       </div>` : ''}
+    ${o.packPhoto || o.status === 'DELIVERED_ACCEPTED' || o.toteQrFromPackPhoto ? `
+      <div class="panel" style="margin-top:10px;border-color:rgba(46,196,182,0.45)">
+        <div class="panel-label">Transaction identity (tote QR chain)</div>
+        <p style="font-size:12px;color:var(--muted);margin:0 0 10px;line-height:1.4">
+          QR read from the <strong>pack photo</strong> identifies this sale end-to-end.
+          Buyer door photo must match that same code.
+        </p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div>
+            <div class="mono" style="margin-bottom:4px">Pack photo</div>
+            ${o.packPhoto
+              ? `<a href="${escapeHtml(o.packPhoto)}" target="_blank" rel="noopener"><img src="${escapeHtml(o.packPhoto)}" alt="Pack" style="width:100%;height:120px;object-fit:cover;border-radius:10px;border:1px solid #2a3344" /></a>`
+              : `<div class="empty" style="min-height:120px;display:grid;place-items:center;font-size:11px">No pack image yet</div>`}
+          </div>
+          <div>
+            <div class="mono" style="margin-bottom:4px">Buyer confirm</div>
+            ${o.confirmImage
+              ? `<a href="${escapeHtml(o.confirmImage)}" target="_blank" rel="noopener"><img src="${escapeHtml(o.confirmImage)}" alt="Buyer confirm" style="width:100%;height:120px;object-fit:cover;border-radius:10px;border:1px solid #2a3344" /></a>`
+              : `<div class="empty" style="min-height:120px;display:grid;place-items:center;font-size:11px">Waiting for door QR</div>`}
+          </div>
+        </div>
+        <div class="row-between" style="margin-top:10px">
+          <span class="status-tag ${o.status === 'DELIVERED_ACCEPTED' ? 'READY' : 'PAID'}">${o.status === 'DELIVERED_ACCEPTED' ? 'QR MATCHED' : (o.toteQrFromPackPhoto ? 'PACK QR LINKED' : 'LINK QR')}</span>
+          <span class="mono">${o.confirmedAt ? escapeHtml(String(o.confirmedAt).replace('T',' ').slice(0,19)) : ''}</span>
+        </div>
+        ${o.status === 'DELIVERED_ACCEPTED' ? `<p style="font-size:12px;color:#9fdad3;margin:8px 0 0;line-height:1.4">Customer confirmed intact drop-off — tote QR matched yours.</p>` : ''}
+        <div class="mono" style="margin-top:6px;word-break:break-all;font-size:10px">Identity QR: ${escapeHtml(o.matchedToteQr || o.toteQrPayload || '—')}</div>
+      </div>` : ''}
   `;
 
   const streamHost = document.createElement('div');
@@ -253,7 +289,14 @@ function jobCard(o) {
     actions.appendChild(btn('Start pack', 'btn-red', () => act(o.id, 'start-pack')));
   }
   if (o.status === 'PACKING' || (o.status === 'PAID')) {
-    if (!o.packPhotoStub) actions.appendChild(btn('Pack photo — product + tote QR in frame (stub)', 'btn-ghost', () => act(o.id, 'pack-photo')));
+    if (!o.packPhotoStub) {
+      actions.appendChild(btn('📷 Pack photo — product + tote QR in frame', 'btn-red', () => capturePackPhoto(o)));
+      actions.appendChild(btn('Demo stub (no camera)', 'btn-ghost', () => act(o.id, 'pack-photo')));
+    } else if (!o.toteQrFromPackPhoto && !o.toteQrLinkedAt) {
+      actions.appendChild(btn('Reshoot pack photo (need QR in frame)', 'btn-red', () => capturePackPhoto(o)));
+    } else if (o.packPhotoStub && !o.toteQrFromPackPhoto) {
+      actions.appendChild(btn('Reshoot pack photo', 'btn-ghost', () => capturePackPhoto(o)));
+    }
     if (o.status === 'PACKING' && o.packPhotoStub && !o.sealConfirmed) {
       actions.appendChild(btn('Confirm seal (zip+VOID)', 'btn-teal', () => act(o.id, 'seal')));
     }
@@ -303,6 +346,104 @@ function btn(label, cls, onClick) {
   b.textContent = label;
   b.addEventListener('click', onClick);
   return b;
+}
+
+
+async function capturePackPhoto(order) {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.capture = 'environment';
+  input.onchange = async () => {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    try {
+      toast('Reading tote QR from pack photo…');
+      const dataUrl = await fileToDataUrlShop(file);
+      let detected = await detectQrFromImageFile(file);
+      let fromPack = !!detected;
+      if (!detected) {
+        toast('No QR found in pack photo — reshoot or enter bag QR manually');
+        const manual = prompt('No QR detected. Enter/paste the tote bag QR payload (or Cancel to reshoot):');
+        if (!manual || !manual.trim()) {
+          toast('Reshoot pack photo with tote QR in frame');
+          return;
+        }
+        detected = manual.trim();
+        fromPack = false;
+      }
+      const { order: o, qrDetected } = await api(`/api/orders/${order.id}/pack-photo`, {
+        method: 'POST',
+        body: JSON.stringify({
+          packImage: dataUrl,
+          toteQrPayload: detected,
+          qrDetectedFromPack: fromPack,
+          fromPackPhoto: fromPack,
+        }),
+      });
+      toast(fromPack || qrDetected
+        ? 'Pack photo saved — tote QR is transaction identity'
+        : 'Pack photo saved — QR linked manually (reshoot preferred)');
+      await refreshJobs();
+    } catch (err) {
+      toast(err.message || 'Pack photo failed');
+    }
+  };
+  input.click();
+}
+
+function fileToDataUrlShop(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
+}
+
+async function detectQrFromImageFile(file) {
+  try {
+    if ('BarcodeDetector' in window && typeof createImageBitmap === 'function') {
+      const bmp = await createImageBitmap(file);
+      let detector;
+      try {
+        detector = new BarcodeDetector({ formats: ['qr_code'] });
+      } catch {
+        detector = new BarcodeDetector();
+      }
+      const codes = await detector.detect(bmp);
+      bmp.close && bmp.close();
+      if (codes && codes[0] && codes[0].rawValue) return codes[0].rawValue;
+    }
+  } catch (_) {}
+  try {
+    if (!window.jsQR) {
+      await new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
+        s.onload = resolve;
+        s.onerror = reject;
+        document.head.appendChild(s);
+      });
+    }
+    const img = await new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const im = new Image();
+      im.onload = () => { URL.revokeObjectURL(url); resolve(im); };
+      im.onerror = reject;
+      im.src = url;
+    });
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width;
+    canvas.height = img.height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0);
+    const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const code = window.jsQR(data.data, data.width, data.height);
+    return code && code.data ? code.data : null;
+  } catch (_) {
+    return null;
+  }
 }
 
 async function act(id, action) {

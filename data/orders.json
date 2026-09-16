@@ -169,5 +169,59 @@
       "charged": 55,
       "note": "Pay stub — no real Stripe. Marked PAID so shop can pack."
     }
+  },
+  {
+    "id": "0d75d9cf-adbc-41bc-a942-7a443a2ad69c",
+    "status": "DELIVERED_ACCEPTED",
+    "productId": "2021-panini-score-football",
+    "productTitle": "2021 Panini Score Football",
+    "productImage": "/img/products/2021-panini-score-football.jpg",
+    "productEmoji": "🏈",
+    "productPrice": 45,
+    "toteQrPayload": "TOTEBAG-DEMO-3a2ad69c",
+    "deliveryFee": 10,
+    "total": 55,
+    "windowId": "w_today_1800",
+    "windowLabel": "Today 6-8pm",
+    "membershipOptIn": false,
+    "shopId": "shop_demo_01",
+    "createdAt": "2026-09-16T04:45:03.584Z",
+    "updatedAt": "2026-09-16T04:45:03.599Z",
+    "paidAt": "2026-09-16T04:45:03.586Z",
+    "paymentStub": {
+      "method": "stub",
+      "charged": 55,
+      "note": "Pay stub — no real Stripe. Marked PAID so shop can pack."
+    },
+    "packPhoto": "/img/pack/0d75d9cf-adbc-41bc-a942-7a443a2ad69c-1789533903590.jpg",
+    "packPhotoStub": true,
+    "packPhotoNote": "Pack photo saved — tote QR in frame is transaction identity.",
+    "toteQrLinkedAt": "2026-09-16T04:45:03.590Z",
+    "toteQrFromPackPhoto": true,
+    "sealConfirmed": true,
+    "sealChecklist": {
+      "zipTie": true,
+      "voidLabel": true,
+      "qrLast4": "D69C",
+      "copy": "Zip both pulls · one zip tie through both loops · VOID wrap on lock head (physical seal). Tote QR is already printed on the bag — not a sticker."
+    },
+    "sealedAt": "2026-09-16T04:45:03.593Z",
+    "pickedUpAt": "2026-09-16T04:45:03.594Z",
+    "arrivePhotoStub": true,
+    "arrivePhotoNote": "Stub: sealed tote at door photo (camera not wired). Buyer approve unlocked.",
+    "qrVerified": true,
+    "qrScannedAt": "2026-09-16T04:45:03.599Z",
+    "qrScannedPayload": "TOTEBAG-DEMO-3a2ad69c",
+    "matchedToteQr": "TOTEBAG-DEMO-3a2ad69c",
+    "confirmImage": "/img/confirmations/0d75d9cf-adbc-41bc-a942-7a443a2ad69c-1789533903599.jpg",
+    "confirmedAt": "2026-09-16T04:45:03.599Z",
+    "acceptedAt": "2026-09-16T04:45:03.599Z",
+    "settlementStub": {
+      "product": 45,
+      "platformTake": 6.75,
+      "shopShare": 38.25,
+      "deliveryFee": 10,
+      "note": "Sale final after tote QR match + buyer confirmation image. Shop payout stub."
+    }
   }
 ]

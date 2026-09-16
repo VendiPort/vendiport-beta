@@ -67,8 +67,9 @@ function render(order) {
       <div class="panel">
         <div class="panel-label">Sealed tote bag</div>
         <p style="font-size:13px;color:var(--muted);margin:0;line-height:1.4">
-          Confirm the package is secured and untampered (zip-tie + VOID). Sale final only after the
-          <strong>QR on your tote bag</strong> matches this order (last-4 ${order.last4}).
+          Confirm everything is intact (zip-tie + VOID). Then scan or upload a photo of the
+          <strong>QR printed on your tote bag</strong> — it must match the tote QR from the shop’s pack photo
+          (last-4 ${order.last4}). That photo goes to the shop as drop-off proof.
         </p>
       </div>
 
@@ -81,7 +82,10 @@ function render(order) {
 
   if (done) {
     if (order.status === 'DELIVERED_ACCEPTED') {
-      actions.innerHTML = `<div class="banner ok">Tote-bag QR matched · Accepted — sale final.${order.qrVerified ? ' ✓' : ''}</div>`;
+      actions.innerHTML = `<div class="banner ok">Tote-bag QR matched · Accepted — sale final.${order.qrVerified ? ' ✓' : ''}</div>
+        ${order.confirmImage ? `<div class="panel" style="margin-top:10px"><div class="panel-label">Your confirmation photo (sent to shop)</div>
+        <img src="${escapeHtml(order.confirmImage)}" alt="Confirmation" style="width:100%;max-height:220px;object-fit:cover;border-radius:10px;margin-top:6px" />
+        <div class="mono" style="margin-top:6px">${escapeHtml(order.confirmedAt || '')}</div></div>` : ''}`;
     } else if (order.status === 'REFUSED_SEAL') {
       actions.innerHTML = '<div class="banner warn">Refused (seal / tote-bag QR fail) — full refund stub. Return tote to shop.</div>';
     } else {
@@ -122,8 +126,8 @@ function render(order) {
   panel.innerHTML = `
     <div class="panel-label">Scan or upload the QR on your tote bag</div>
     <p style="font-size:12px;color:var(--muted);margin:0 0 10px;line-height:1.4">
-      Confirm secured, untampered package. Point camera at the <strong>tote-bag QR</strong> (must match this order),
-      or upload a photo of that same tote QR. Camera + image upload both work.
+      Intact package + match to the <strong>store’s original tote QR</strong>. Camera scan captures a proof frame;
+      upload sends your tote-QR photo to the shop. Sale completes only when codes match.
     </p>
     <div class="qr-stage">
       <video id="qr-video" playsinline muted></video>
@@ -203,9 +207,10 @@ async function startCameraScan(order) {
         const codes = await det.detect(video);
         if (codes && codes.length) {
           const raw = codes[0].rawValue || '';
-          status.textContent = 'QR detected — verifying…';
+          status.textContent = 'QR detected — capturing proof frame…';
+          const snap = captureVideoSnapshot(video);
           stopScanner();
-          await acceptWithQr(order, raw);
+          await acceptWithQr(order, raw, snap);
           return;
         }
       } catch (_) {}
@@ -228,7 +233,8 @@ async function scanImageFile(order, file) {
       const codes = await det.detect(bmp);
       bmp.close && bmp.close();
       if (codes && codes.length) {
-        await acceptWithQr(order, codes[0].rawValue || '');
+        const dataUrl = await fileToDataUrl(file);
+        await acceptWithQr(order, codes[0].rawValue || '', dataUrl);
         return;
       }
       status.textContent = 'No QR found in image — try again';
@@ -238,7 +244,8 @@ async function scanImageFile(order, file) {
     const ok = await tryJsQrFromFile(file);
     bmp.close && bmp.close();
     if (ok) {
-      await acceptWithQr(order, ok);
+      const dataUrl = await fileToDataUrl(file);
+      await acceptWithQr(order, ok, dataUrl);
       return;
     }
     status.textContent = 'Could not decode QR — try another image or camera';
@@ -285,14 +292,45 @@ function loadImageFromFile(file) {
   });
 }
 
-async function acceptWithQr(order, payload) {
+function captureVideoSnapshot(video) {
+  try {
+    if (!video || !video.videoWidth) return null;
+    const canvas = document.createElement('canvas');
+    const maxW = 1280;
+    const scale = Math.min(1, maxW / video.videoWidth);
+    canvas.width = Math.round(video.videoWidth * scale);
+    canvas.height = Math.round(video.videoHeight * scale);
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/jpeg', 0.85);
+  } catch (_) {
+    return null;
+  }
+}
+
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function acceptWithQr(order, payload, confirmImage) {
   const status = qs('#qr-status');
+  if (!confirmImage) {
+    const msg = 'Need a confirmation photo of the tote QR for the shop.';
+    if (status) status.textContent = msg;
+    toast(msg);
+    return;
+  }
   try {
     const { order: o } = await api(`/api/orders/${order.id}/accept`, {
       method: 'POST',
-      body: JSON.stringify({ qrPayload: payload }),
+      body: JSON.stringify({ qrPayload: payload, confirmImage }),
     });
-    toast('Tote-bag QR matched — sale final');
+    toast('Tote QR matched — confirmation sent to shop');
     render(o);
   } catch (err) {
     if (status) status.textContent = err.message;
