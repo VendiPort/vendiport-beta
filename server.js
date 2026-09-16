@@ -86,6 +86,9 @@ function markOrderPaid(order, paymentMeta) {
   if (!consumeUnit(order.productId, order.windowId)) {
     throw new Error('No units left for that window');
   }
+  ensureLineItems(order);
+  order.lineItems.forEach((l) => { l.paid = true; });
+  recalcOrderTotals(order);
   order.status = 'PAID';
   order.updatedAt = new Date().toISOString();
   order.paidAt = order.updatedAt;
@@ -117,6 +120,7 @@ const MONEY_COPY = {
 };
 
 const CANCELABLE = new Set(['DRAFT', 'PAID', 'PACKING', 'READY']);
+const ADDABLE = new Set(['PAID', 'PACKING', 'READY']);
 const SHOP_VISIBLE = new Set(['PAID', 'PACKING', 'READY', 'PICKED_UP', 'DELIVERED_ACCEPTED']);
 
 const MIME = {
@@ -231,6 +235,55 @@ function last4(id) {
   return s.slice(-4).toUpperCase();
 }
 
+
+function ensureLineItems(order) {
+  if (!order) return order;
+  if (Array.isArray(order.lineItems) && order.lineItems.length) return order;
+  order.lineItems = [
+    {
+      id: 'line_primary',
+      productId: order.productId,
+      title: order.productTitle,
+      price: order.productPrice,
+      windowId: order.windowId,
+      windowLabel: order.windowLabel,
+      image: order.productImage || null,
+      emoji: order.productEmoji || null,
+      paid: order.status !== 'DRAFT',
+      addedAt: order.createdAt || new Date().toISOString(),
+    },
+  ];
+  return order;
+}
+
+function paidProductTotal(order) {
+  ensureLineItems(order);
+  return +(order.lineItems.filter((l) => l.paid !== false).reduce((s, l) => s + Number(l.price || 0), 0)).toFixed(2);
+}
+
+function recalcOrderTotals(order) {
+  ensureLineItems(order);
+  const productPrice = paidProductTotal(order);
+  order.productPrice = productPrice;
+  const guest = order.membershipOptIn ? 0 : +(productPrice * 0.005).toFixed(2);
+  order.guestFee = guest;
+  order.deliveryFee = order.deliveryFee != null ? order.deliveryFee : DELIVERY_FEE;
+  order.total = +(productPrice + order.deliveryFee + guest).toFixed(2);
+  const primary = order.lineItems[0];
+  if (primary) {
+    order.productId = primary.productId;
+    order.productTitle =
+      order.lineItems.length > 1
+        ? primary.title + ' +' + (order.lineItems.length - 1) + ' more'
+        : primary.title;
+    order.productImage = primary.image || order.productImage;
+    order.productEmoji = primary.emoji || order.productEmoji;
+    order.windowId = primary.windowId;
+    order.windowLabel = primary.windowLabel;
+  }
+  return order;
+}
+
 function publicOrder(o) {
   return {
     id: o.id,
@@ -249,7 +302,7 @@ function publicOrder(o) {
     cancelAllowed: CANCELABLE.has(o.status),
     cancelFeeRate: CANCEL_FEE_RATE,
     cancelFeeCopy:
-      'Cancel until driver pickup: 15% of product (shop 7.5% / VendiPort 7.5%). Delivery fee refunded if not picked up. After pickup, cancel is closed — all sales final except seal / tote-bag QR refuse (full refund).',
+      'Cancel fee: 15% of product. Delivery fee refunded if not yet picked up. After pickup: all sales final except seal or tote QR fail at delivery.',
     createdAt: o.createdAt,
     updatedAt: o.updatedAt,
     pickedUpAt: o.pickedUpAt || null,
@@ -269,6 +322,13 @@ function publicOrder(o) {
     sealConfirmed: !!o.sealConfirmed,
     arrivePhotoStub: !!o.arrivePhotoStub,
     approveUnlocked: !!(o.arrivePhotoStub || o.status === 'PICKED_UP' || o.status === 'DELIVERED_ACCEPTED' || o.status === 'REFUSED_SEAL'),
+    lineItems: (ensureLineItems(o).lineItems || []).map((l) => Object.assign({}, l)),
+    pendingAddon: o.pendingAddon || null,
+    canAddItems: ADDABLE.has(o.status),
+    amended: !!o.amendedAt,
+    amendedAt: o.amendedAt || null,
+    cancelFeeEstimate: +((paidProductTotal(o) || o.productPrice || 0) * CANCEL_FEE_RATE).toFixed(2),
+    salesFinal: ['PICKED_UP', 'DELIVERED_ACCEPTED', 'REFUSED_SEAL'].includes(o.status),
   };
 }
 
@@ -1040,7 +1100,23 @@ async function handleApi(req, res, pathname) {
       shopId: shop.id,
       createdAt: now,
       updatedAt: now,
+      lineItems: [
+        {
+          id: 'line_' + randomUUID().slice(0, 8),
+          productId: product.id,
+          title: product.title,
+          price: product.price,
+          windowId: window.id,
+          windowLabel: window.label,
+          image: product.image || null,
+          emoji: product.emoji || null,
+          paid: false,
+          addedAt: now,
+        },
+      ],
+      pendingAddon: null,
     };
+    recalcOrderTotals(order);
 
     // Decrement window units on pay only (reserve on pay for MVP)
     saveOrder(order);
@@ -1277,6 +1353,103 @@ async function handleApi(req, res, pathname) {
     return send(res, 200, { order: publicOrder(order) });
   }
 
+
+  // POST /api/orders/:id/add-items — stage add-on (before pickup); pay stub for delta
+  if (method === 'POST' && /^\/api\/orders\/[^/]+\/add-items$/.test(pathname)) {
+    const id = pathname.split('/')[3];
+    const body = await readBody(req);
+    const order = findOrder(id);
+    if (!order) return sendError(res, 404, 'Order not found');
+    if (!ADDABLE.has(order.status)) {
+      return sendError(res, 409, 'Cannot add items after driver pickup — all sales final');
+    }
+    ensureLineItems(order);
+    const items = Array.isArray(body.items) ? body.items : body.productId ? [body] : [];
+    if (!items.length) return sendError(res, 400, 'items required');
+    const staged = [];
+    for (const raw of items) {
+      const product = findProduct(raw.productId);
+      if (!product) return sendError(res, 400, 'Unknown product ' + raw.productId);
+      const window =
+        (product.windows || []).find((w) => w.id === raw.windowId) || earliestWindow(product);
+      if (!window || !(window.units > 0)) {
+        return sendError(res, 409, 'No units left for ' + product.title);
+      }
+      staged.push({
+        id: 'line_' + randomUUID().slice(0, 8),
+        productId: product.id,
+        title: product.title,
+        price: product.price,
+        windowId: window.id,
+        windowLabel: window.label,
+        image: product.image || null,
+        emoji: product.emoji || null,
+        paid: false,
+        addedAt: new Date().toISOString(),
+      });
+    }
+    const existingPending = (order.pendingAddon && order.pendingAddon.lines) || [];
+    const lines = existingPending.concat(staged);
+    const delta = +lines.reduce((s, l) => s + Number(l.price || 0), 0).toFixed(2);
+    order.pendingAddon = { lines: lines, delta: delta, createdAt: new Date().toISOString() };
+    order.updatedAt = new Date().toISOString();
+    saveOrder(order);
+    return send(res, 200, {
+      order: publicOrder(order),
+      message: 'Add-on staged — Pay stub for the delta before shop is alerted',
+    });
+  }
+
+  // POST /api/orders/:id/pay-addon — stub pay pending add-on
+  if (method === 'POST' && /^\/api\/orders\/[^/]+\/pay-addon$/.test(pathname)) {
+    const id = pathname.split('/')[3];
+    const order = findOrder(id);
+    if (!order) return sendError(res, 404, 'Order not found');
+    if (!ADDABLE.has(order.status)) {
+      return sendError(res, 409, 'Cannot pay add-on after pickup');
+    }
+    if (!order.pendingAddon || !(order.pendingAddon.lines || []).length) {
+      return sendError(res, 409, 'No pending add-on to pay');
+    }
+    ensureLineItems(order);
+    const lines = order.pendingAddon.lines;
+    const delta = +lines.reduce((s, l) => s + Number(l.price || 0), 0).toFixed(2);
+    for (const line of lines) {
+      if (!consumeUnit(line.productId, line.windowId)) {
+        return sendError(res, 409, 'No units left for ' + line.title);
+      }
+      line.paid = true;
+      order.lineItems.push(line);
+    }
+    order.pendingAddon = null;
+    order.amendedAt = new Date().toISOString();
+    order.amendedCount = (order.amendedCount || 0) + 1;
+    order.addonPaymentStub = {
+      method: 'stub',
+      charged: delta,
+      note: 'Pay stub for add-on — shop alerted to pull added items',
+      at: order.amendedAt,
+    };
+    recalcOrderTotals(order);
+    order.updatedAt = order.amendedAt;
+    saveOrder(order);
+    return send(res, 200, {
+      order: publicOrder(order),
+      message: 'Add-on paid (stub). Shop: order updated — pull added items.',
+    });
+  }
+
+  // POST /api/orders/:id/clear-addon
+  if (method === 'POST' && /^\/api\/orders\/[^/]+\/clear-addon$/.test(pathname)) {
+    const id = pathname.split('/')[3];
+    const order = findOrder(id);
+    if (!order) return sendError(res, 404, 'Order not found');
+    order.pendingAddon = null;
+    order.updatedAt = new Date().toISOString();
+    saveOrder(order);
+    return send(res, 200, { order: publicOrder(order) });
+  }
+
   // POST /api/orders/:id/cancel
   if (method === 'POST' && /^\/api\/orders\/[^/]+\/cancel$/.test(pathname)) {
     const id = pathname.split('/')[3];
@@ -1289,10 +1462,12 @@ async function handleApi(req, res, pathname) {
         'Cancel closed after driver pickup. All sales final except seal refuse.'
       );
     }
-    const cancelFee = +(order.productPrice * CANCEL_FEE_RATE).toFixed(2);
+    ensureLineItems(order);
+    const productTotal = paidProductTotal(order);
+    const cancelFee = +(productTotal * CANCEL_FEE_RATE).toFixed(2);
     const shopShare = +(cancelFee / 2).toFixed(2);
     const platformShare = +(cancelFee / 2).toFixed(2);
-    const productRefund = +(order.productPrice - cancelFee).toFixed(2);
+    const productRefund = +(productTotal - cancelFee).toFixed(2);
     order.status = 'CANCELLED';
     order.updatedAt = new Date().toISOString();
     order.cancelledAt = order.updatedAt;
@@ -1304,8 +1479,10 @@ async function handleApi(req, res, pathname) {
       cancelFeeSplit: { shop: shopShare, vendiport: platformShare },
       note: '15% cancel fee of product split 7.5/7.5. Delivery fee refunded (not picked up).',
     };
-    // Restore a unit to the window
-    restoreUnit(order.productId, order.windowId);
+    for (const line of order.lineItems) {
+      if (line.paid !== false) restoreUnit(line.productId, line.windowId);
+    }
+    order.pendingAddon = null;
     saveOrder(order);
     return send(res, 200, { order: publicOrder(order) });
   }

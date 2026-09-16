@@ -1,6 +1,7 @@
 /* Buyer virtual vending machine — glass slots + machine checkout; never reveals shop */
 let catalog = { products: [], deliveryFee: 10, minOrder: 25 };
 let selected = null;
+let addToOrderId = null;
 const GUEST_RATE = 0.005; // +0.5% guest fee when not a member
 
 function membershipOn() {
@@ -46,6 +47,13 @@ function renderBrowse() {
   qs('#view-paid').classList.add('hidden');
   renderAccountChip();
   paintBuyerStream('browse', 'browse');
+  const ab = qs('#addto-banner');
+  if (ab) {
+    if (addToOrderId) {
+      ab.classList.remove('hidden');
+      ab.textContent = 'Adding to order · last-4 ' + addToOrderId.slice(-4).toUpperCase() + ' — push a box, then pay stub for the add-on.';
+    } else ab.classList.add('hidden');
+  }
 
   const list = qs('#product-list');
   list.innerHTML = '';
@@ -74,13 +82,25 @@ function renderBrowse() {
   }
 }
 
-function openCheckout(productId) {
+async function openCheckout(productId) {
   const product = catalog.products.find((p) => p.id === productId);
   if (!product) return;
-  selected = {
-    product,
-    windowId: (product.earliestWindow && product.earliestWindow.id) || (product.windows[0] && product.windows[0].id),
-  };
+  const windowId = (product.earliestWindow && product.earliestWindow.id) || (product.windows[0] && product.windows[0].id);
+  if (addToOrderId) {
+    try {
+      const { order } = await api(`/api/orders/${addToOrderId}/add-items`, {
+        method: 'POST',
+        body: JSON.stringify({ productId, windowId }),
+      });
+      toast('Added — pay stub for the add-on on Track');
+      location.href = '/track/' + addToOrderId;
+      return;
+    } catch (err) {
+      toast(err.message || 'Could not add to order');
+      return;
+    }
+  }
+  selected = { product, windowId };
   renderCheckout();
 }
 
@@ -223,7 +243,25 @@ function renderPaid(order) {
   qs('#paid-window').textContent = order.windowLabel;
   qs('#paid-total').textContent = money(order.total);
   qs('#paid-id').textContent = order.id;
-  qs('#paid-cancel-copy').textContent = order.cancelFeeCopy;
+  const changeCopy = qs('#paid-change-copy');
+  const changeBtn = qs('#paid-change-btn');
+  const cancelCopy = qs('#paid-cancel-copy');
+  if (order.cancelAllowed || order.canAddItems) {
+    if (changeCopy) changeCopy.textContent = 'You can change or cancel your order until the courier picks it up.';
+    if (changeBtn) {
+      changeBtn.href = '/track/' + order.id;
+      changeBtn.textContent = 'Change order';
+      changeBtn.classList.remove('hidden');
+    }
+    if (cancelCopy) cancelCopy.textContent = 'Opens Track: Add items or Cancel order. Cancel fee: 15% of product.';
+  } else {
+    if (changeCopy) {
+      changeCopy.textContent =
+        'This order can’t be changed or canceled — the courier has picked it up. All sales final except if the seal or tote QR fails at delivery.';
+    }
+    if (changeBtn) changeBtn.classList.add('hidden');
+    if (cancelCopy) cancelCopy.textContent = '';
+  }
 
   const pulse = qs('#paid-pulse-text');
   if (order.status === 'PAID' || order.status === 'PACKING') {
@@ -245,17 +283,6 @@ function renderPaid(order) {
   const link = qs('#paid-handoff');
   link.href = order.handoffUrl;
   link.textContent = location.origin + order.handoffUrl;
-
-  qs('#paid-cancel-btn').onclick = async () => {
-    try {
-      const { order: o } = await api(`/api/orders/${order.id}/cancel`, { method: 'POST', body: '{}' });
-      toast(`Cancelled. Fee ${money(o.cancelFee || 0)}`);
-      renderPaid(o);
-    } catch (err) {
-      toast(err.message);
-    }
-  };
-  qs('#paid-cancel-btn').disabled = !order.cancelAllowed;
 }
 
 function escapeHtml(s) {
@@ -267,7 +294,15 @@ function escapeHtml(s) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  qs('#back-browse').addEventListener('click', () => loadBrowse());
+  const q = new URLSearchParams(location.search);
+  addToOrderId = q.get('addTo') || null;
+  qs('#back-browse').addEventListener('click', () => {
+    if (addToOrderId) {
+      location.href = '/track/' + addToOrderId;
+      return;
+    }
+    loadBrowse();
+  });
   qs('#pay-btn').addEventListener('click', payStub);
   renderAccountChip();
   loadPayConfig().catch(() => {});

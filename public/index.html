@@ -33,6 +33,7 @@
         </div>
         <div class="machine-tray" aria-hidden="true"></div>
       </div>
+      <div id="addto-banner" class="banner paid hidden" style="margin:8px 0">Adding to your order — push a box, then pay stub for the add-on.</div>
       <p class="machine-note">Sealed boxes behind glass · push a lit tab to select · source stays hidden</p>
       <p class="footer-note">Live beta · <a href="https://vendiport-beta.onrender.com">vendiport-beta.onrender.com</a></p>
     </section>
@@ -146,9 +147,13 @@
           </div>
         </div>
 
-        <div class="panel alert">
-          <p style="font-size:12px;line-height:1.45;margin:0" id="paid-cancel-copy"></p>
-          <button type="button" class="btn btn-ghost btn-block btn-sm" id="paid-cancel-btn" style="margin-top:10px">Cancel order (15% fee)</button>
+        <div class="panel" id="paid-change-panel">
+          <div class="panel-label">Change order</div>
+          <p style="font-size:13px;color:var(--muted);margin:0 0 10px;line-height:1.45" id="paid-change-copy">
+            You can change or cancel your order until the courier picks it up.
+          </p>
+          <a class="btn btn-teal btn-block btn-sm" id="paid-change-btn" href="#" style="text-align:center;text-decoration:none;min-height:44px;display:grid;place-items:center">Change order</a>
+          <p class="footer-note" style="text-align:left;margin-top:8px" id="paid-cancel-copy"></p>
         </div>
 
         <div class="panel">

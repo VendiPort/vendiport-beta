@@ -360,6 +360,15 @@ function renderJobs(orders) {
   }
 }
 
+
+function shopLinesHtml(o) {
+  const lines = o.lineItems || [];
+  if (lines.length <= 1) return '';
+  return `<ul style="margin:6px 0 0;padding-left:16px;font-size:12px;color:var(--muted);line-height:1.4">${
+    lines.map((l) => `<li>${escapeHtml(l.title || 'Item')} · ${money(l.price)}${l.paid === false ? ' (pending)' : ''}</li>`).join('')
+  }</ul>`;
+}
+
 function jobCard(o) {
   const el = document.createElement('article');
   el.className = `shop-job ${o.status}`;
@@ -378,9 +387,14 @@ function jobCard(o) {
         </div>
         <h2 style="font-size:15px;line-height:1.25">${escapeHtml(o.productTitle)}</h2>
         <div class="mono" style="margin-top:4px">${escapeHtml(o.windowLabel)} · ${money(o.productPrice)}</div>
+        ${shopLinesHtml(o)}
       </div>
     </div>
-    ${o.status === 'PAID' ? '<div class="banner paid" style="margin-top:10px">NEW SALE — pull it. Start pack → pack photo with tote QR.</div>' : ''}
+    ${o.amended && ['PAID','PACKING','READY'].includes(o.status)
+      ? '<div class="banner paid" style="margin-top:10px">Order updated — pull added items</div>'
+      : ''}
+    ${o.status === 'PAID' && !o.amended ? '<div class="banner paid" style="margin-top:10px">NEW SALE — pull it. Start pack → pack photo with tote QR.</div>' : ''}
+    ${o.status === 'PAID' && o.amended ? '<div class="banner paid" style="margin-top:8px">NEW SALE — pull all line items → pack photo with tote QR.</div>' : ''}
     <div class="panel" style="margin-top:10px">
       <div class="panel-label">Pack · tote bag (QR already on bag)</div>
       <p style="font-size:12px;color:var(--muted);margin:0;line-height:1.45">
