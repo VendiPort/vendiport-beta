@@ -875,24 +875,23 @@ async function handleApi(req, res, pathname) {
     return send(res, 200, { order: shopOrder(order) });
   }
 
-  // POST /api/orders/:id/ready  (sealed + ready)
+  // POST /api/orders/:id/ready — only after PAID→pack→pack-photo→seal
   if (method === 'POST' && /^\/api\/orders\/[^/]+\/ready$/.test(pathname)) {
     const id = pathname.split('/')[3];
     const order = findOrder(id);
     if (!order) return sendError(res, 404, 'Order not found');
-    if (!['PACKING', 'PAID'].includes(order.status)) {
-      return sendError(res, 409, `Cannot mark ready from ${order.status}`);
+    if (order.status !== 'PACKING') {
+      return sendError(res, 409, `Cannot mark ready from ${order.status} — Start pack after PAID sale alert first`);
     }
-    // Guided path prefers pack+seal; allow skip for demo with auto-stubs
     if (!order.packPhotoStub) {
-      order.packPhotoStub = true;
-      order.packPhotoNote = 'Auto-stubbed pack photo for READY shortcut';
+      return sendError(res, 409, 'Pack photo with tote QR required before READY (sale identity)');
     }
     if (!order.sealConfirmed) {
-      order.sealConfirmed = true;
-      order.sealChecklist = { zipTie: true, voidLabel: true, qrLast4: order.id.slice(-4).toUpperCase(), copy: 'Seal checklist auto-confirmed on READY' };
+      return sendError(res, 409, 'Confirm seal (zip+VOID) before READY');
     }
-    if (order.status === 'PAID') order.status = 'PACKING';
+    if (!order.toteQrPayload) {
+      return sendError(res, 409, 'Tote QR identity missing — reshoot pack photo or link bag QR');
+    }
     order.status = 'READY';
     order.updatedAt = new Date().toISOString();
     order.sealedAt = order.updatedAt;

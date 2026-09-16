@@ -53,6 +53,37 @@
     #inv-barcode-stage.on { display:block; }
     #inv-barcode-video { width:100%; max-height:220px; display:block; }
     #inv-barcode-status { font-size:11px; color:#8b95a8; margin-top:6px; }
+
+    .sale-alert {
+      display:none; margin: 0 0 12px; padding: 14px 14px;
+      border-radius: 14px; border: 2px solid #e84a4a;
+      background: linear-gradient(180deg, rgba(232,74,74,0.25), rgba(20,10,10,0.95));
+      box-shadow: 0 0 24px rgba(232,74,74,0.35);
+      animation: salePulse 1.4s ease-in-out infinite;
+    }
+    .sale-alert.on { display:block; }
+    .sale-alert strong { color:#fff; font-size:16px; display:block; margin-bottom:4px; }
+    .sale-alert p { margin:0; font-size:13px; color:#ffc9c9; line-height:1.4; }
+    .sale-alert .sale-actions { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+    @keyframes salePulse {
+      0%,100% { box-shadow: 0 0 12px rgba(232,74,74,0.3); }
+      50% { box-shadow: 0 0 28px rgba(232,74,74,0.55); }
+    }
+    .tab .badge {
+      display:inline-grid; place-items:center; min-width:18px; height:18px; padding:0 5px;
+      margin-left:4px; border-radius:999px; background:#fff; color:#e84a4a;
+      font-size:10px; font-weight:900;
+    }
+    .tab .badge:empty, .tab .badge[data-count="0"] { display:none; }
+    .shop-job.PAID {
+      border: 2px solid #e84a4a !important;
+      box-shadow: 0 0 20px rgba(232,74,74,0.35);
+      order: -1;
+    }
+    .new-sale-head {
+      color:#ff8a8a; font-weight:800; letter-spacing:.06em; text-transform:uppercase;
+      font-size:11px; margin: 4px 0 8px;
+    }
   </style>
 </head>
 <body class="shop-body">
@@ -71,7 +102,7 @@
     <p class="sub" id="page-sub">Shop stream: PAID → pack → seal → READY → pickup → done</p>
 
     <div class="tabs" role="tablist">
-      <button type="button" class="tab on" data-tab="jobs">Jobs</button>
+      <button type="button" class="tab on" data-tab="jobs">Jobs<span class="badge" id="jobs-badge" data-count="0"></span></button>
       <button type="button" class="tab" data-tab="inventory">Inventory</button>
       <button type="button" class="tab" data-tab="windows">Windows</button>
       <button type="button" class="tab" data-tab="stats">Stats</button>
@@ -84,6 +115,15 @@
 
     <!-- JOBS -->
     <section id="tab-jobs">
+      <div class="sale-alert" id="sale-alert" role="alert">
+        <strong id="sale-alert-title">New sale — pull it</strong>
+        <p id="sale-alert-body">A buyer paid. Start pack only after this alert — no unpaid jobs appear here.</p>
+        <div class="sale-actions">
+          <button type="button" class="btn btn-red btn-sm" id="sale-sound-arm">Enable alert sound</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="sale-alert-dismiss">Dismiss banner</button>
+        </div>
+      </div>
+
       <div class="card">
         <div class="toggle-row">
           <div class="copy">

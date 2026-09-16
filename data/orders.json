@@ -223,5 +223,29 @@
       "deliveryFee": 10,
       "note": "Sale final after tote QR match + buyer confirmation image. Shop payout stub."
     }
+  },
+  {
+    "id": "8cc886ad-c8de-4ea2-8e94-39ed9bed6dbe",
+    "status": "PACKING",
+    "productId": "2021-panini-score-football",
+    "productTitle": "2021 Panini Score Football",
+    "productImage": "/img/products/2021-panini-score-football.jpg",
+    "productEmoji": "🏈",
+    "productPrice": 45,
+    "toteQrPayload": "VENDIPORT:ORDER:8cc886ad-c8de-4ea2-8e94-39ed9bed6dbe",
+    "deliveryFee": 10,
+    "total": 55,
+    "windowId": "w_today_1800",
+    "windowLabel": "Today 6-8pm",
+    "membershipOptIn": false,
+    "shopId": "shop_demo_01",
+    "createdAt": "2026-09-16T04:48:41.545Z",
+    "updatedAt": "2026-09-16T04:48:41.552Z",
+    "paidAt": "2026-09-16T04:48:41.548Z",
+    "paymentStub": {
+      "method": "stub",
+      "charged": 55,
+      "note": "Pay stub — no real Stripe. Marked PAID so shop can pack."
+    }
   }
 ]

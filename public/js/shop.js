@@ -1,6 +1,12 @@
 /* Shop phone — Jobs | Inventory | Windows */
 let shop = null;
 let tab = 'jobs';
+let knownPaidIds = new Set();
+let saleSoundArmed = false;
+let saleAudioCtx = null;
+let alertDismissedFor = new Set();
+let jobsPollMs = 3000;
+let jobsPollTimer = null;
 
 const STEPS = [
   { key: 'PAID', label: 'PAID — pull it' },
@@ -54,7 +60,17 @@ async function init() {
   else if (location.hash === '#stats') switchTab('stats');
 
   await refreshJobs();
-  setInterval(() => { if (tab === 'jobs') refreshJobs(); }, 4000);
+  startJobsPoll();
+  const arm = qs('#sale-sound-arm');
+  if (arm) arm.addEventListener('click', armSaleSound);
+  const dismiss = qs('#sale-alert-dismiss');
+  if (dismiss) dismiss.addEventListener('click', () => {
+    document.querySelectorAll('.shop-job.PAID').forEach((el) => {
+      const id = el.dataset.oid;
+      if (id) alertDismissedFor.add(id);
+    });
+    updateSaleAlert([]);
+  });
 }
 
 function updateModeCopy(explicit) {
@@ -114,9 +130,117 @@ async function loadStats() {
   }
 }
 
+function startJobsPoll() {
+  if (jobsPollTimer) clearInterval(jobsPollTimer);
+  jobsPollTimer = setInterval(() => {
+    if (tab === 'jobs') refreshJobs().catch(() => {});
+  }, jobsPollMs);
+}
+
+function armSaleSound() {
+  saleSoundArmed = true;
+  try {
+    saleAudioCtx = saleAudioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if (saleAudioCtx.state === 'suspended') saleAudioCtx.resume();
+    // short arm chirp
+    playSaleBeep(180);
+    toast('Sale alert sound on');
+    const b = qs('#sale-sound-arm');
+    if (b) b.textContent = 'Alert sound ON';
+  } catch (err) {
+    toast('Sound unavailable on this device');
+  }
+}
+
+function playSaleBeep(ms = 420) {
+  if (!saleSoundArmed || !saleAudioCtx) return;
+  try {
+    const ctx = saleAudioCtx;
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = 'square';
+    o.frequency.value = 880;
+    g.gain.value = 0.04;
+    o.connect(g);
+    g.connect(ctx.destination);
+    o.start();
+    setTimeout(() => {
+      o.frequency.value = 1320;
+    }, ms / 2);
+    setTimeout(() => {
+      try { o.stop(); } catch (_) {}
+    }, ms);
+  } catch (_) {}
+}
+
+function updateSaleAlert(paidOrders) {
+  const el = qs('#sale-alert');
+  const badge = qs('#jobs-badge');
+  const n = paidOrders.length;
+  if (badge) {
+    badge.dataset.count = String(n);
+    badge.textContent = n ? String(n) : '';
+  }
+  // title badge on jobs tab already
+  if (!el) return;
+  const visible = paidOrders.filter((o) => !alertDismissedFor.has(o.id));
+  if (!visible.length) {
+    el.classList.remove('on');
+    return;
+  }
+  el.classList.add('on');
+  const title = qs('#sale-alert-title');
+  const body = qs('#sale-alert-body');
+  if (title) title.textContent = visible.length === 1
+    ? `New sale — pull it · last-4 ${visible[0].last4}`
+    : `${visible.length} new sales — pull them`;
+  if (body) {
+    body.textContent = visible
+      .map((o) => `${o.productTitle} · ${o.windowLabel} · last-4 ${o.last4}`)
+      .join(' · ');
+  }
+}
+
 async function refreshJobs() {
   const { orders } = await api('/api/orders?scope=shop');
-  renderJobs(orders);
+  // Never show unpaid/DRAFT — server already filters; belt + suspenders
+  const paidPlus = (orders || []).filter((o) =>
+    ['PAID', 'PACKING', 'READY', 'PICKED_UP', 'DELIVERED_ACCEPTED'].includes(o.status)
+  );
+  const paidNow = paidPlus.filter((o) => o.status === 'PAID');
+  const paidIds = new Set(paidNow.map((o) => o.id));
+  let fresh = false;
+  for (const id of paidIds) {
+    if (!knownPaidIds.has(id)) {
+      fresh = true;
+      alertDismissedFor.delete(id);
+    }
+  }
+  if (fresh && knownPaidIds.size > 0) {
+    // new sale since first load
+    playSaleBeep();
+    toast('New PAID sale — pull it');
+  }
+  // seed on first load without blasting
+  if (knownPaidIds.size === 0) {
+    paidIds.forEach((id) => knownPaidIds.add(id));
+  } else {
+    paidIds.forEach((id) => knownPaidIds.add(id));
+    // drop settled
+    for (const id of [...knownPaidIds]) {
+      if (![...paidIds].includes(id) && !paidPlus.some((o) => o.id === id && o.status === 'PAID')) {
+        // keep history small
+      }
+    }
+  }
+  // Faster poll while PAID waiting
+  const nextMs = paidNow.length ? 2000 : 4000;
+  if (nextMs !== jobsPollMs) {
+    jobsPollMs = nextMs;
+    startJobsPoll();
+  }
+  updateSaleAlert(paidNow);
+  renderJobs(paidPlus);
 }
 
 function stepState(orderStatus, stepKey, order) {
@@ -143,21 +267,26 @@ function stepState(orderStatus, stepKey, order) {
 function renderJobs(orders) {
   const list = qs('#job-list');
   if (!orders.length) {
-    list.innerHTML = '<div class="empty">No active PAID jobs.<br>Buyer pays on the machine first.</div>';
+    list.innerHTML = '<div class="empty">No PAID sales yet.<br>Buyer must pay on the machine first — then a sale alert appears here.</div>';
+    updateSaleAlert([]);
     return;
   }
-  // Group READY by window; show accepted with confirmation
+  const paid = orders.filter((o) => o.status === 'PAID');
+  const packing = orders.filter((o) => o.status === 'PACKING');
   const ready = orders.filter((o) => o.status === 'READY');
+  const picked = orders.filter((o) => o.status === 'PICKED_UP');
   const accepted = orders.filter((o) => o.status === 'DELIVERED_ACCEPTED');
-  const rest = orders.filter((o) => o.status !== 'READY' && o.status !== 'DELIVERED_ACCEPTED');
   list.innerHTML = '';
-  if (accepted.length) {
-    const headA = document.createElement('div');
-    headA.className = 'step-label';
-    headA.textContent = 'Buyer confirmed (tote QR matched)';
-    list.appendChild(headA);
-    accepted.forEach((o) => list.appendChild(jobCard(o)));
+
+  // PAID first — unmissable
+  if (paid.length) {
+    const head = document.createElement('div');
+    head.className = 'new-sale-head';
+    head.textContent = 'New sale — pull it (start pack only after PAID)';
+    list.appendChild(head);
+    paid.forEach((o) => list.appendChild(jobCard(o)));
   }
+  packing.forEach((o) => list.appendChild(jobCard(o)));
   if (ready.length) {
     const byWin = {};
     for (const o of ready) {
@@ -176,12 +305,20 @@ function renderJobs(orders) {
       group.forEach((o) => list.appendChild(jobCard(o)));
     }
   }
-  rest.forEach((o) => list.appendChild(jobCard(o)));
+  picked.forEach((o) => list.appendChild(jobCard(o)));
+  if (accepted.length) {
+    const headA = document.createElement('div');
+    headA.className = 'step-label';
+    headA.textContent = 'Buyer confirmed (tote QR matched)';
+    list.appendChild(headA);
+    accepted.forEach((o) => list.appendChild(jobCard(o)));
+  }
 }
 
 function jobCard(o) {
   const el = document.createElement('article');
   el.className = `shop-job ${o.status}`;
+  el.dataset.oid = o.id;
   const thumb = o.productImage
     ? `<img class="shop-thumb" src="${escapeHtml(o.productImage)}" alt="" />`
     : `<div class="shop-thumb" style="display:grid;place-items:center;font-size:22px">${o.productEmoji || '🎴'}</div>`;
@@ -198,7 +335,7 @@ function jobCard(o) {
         <div class="mono" style="margin-top:4px">${escapeHtml(o.windowLabel)} · ${money(o.productPrice)}</div>
       </div>
     </div>
-    ${o.status === 'PAID' ? '<div class="banner paid" style="margin-top:10px">PAID — pull it.</div>' : ''}
+    ${o.status === 'PAID' ? '<div class="banner paid" style="margin-top:10px">NEW SALE — pull it. Start pack → pack photo with tote QR.</div>' : ''}
     <div class="panel" style="margin-top:10px">
       <div class="panel-label">Pack · tote bag (QR already on bag)</div>
       <p style="font-size:12px;color:var(--muted);margin:0;line-height:1.45">
@@ -285,22 +422,23 @@ function jobCard(o) {
   }
 
   const actions = el.querySelector('.job-actions');
+  // Locked stream: PAID alert → Start pack ONLY (no pack/ready until PACKING)
   if (o.status === 'PAID') {
-    actions.appendChild(btn('Start pack', 'btn-red', () => act(o.id, 'start-pack')));
+    actions.appendChild(btn('Start pack — pull it', 'btn-red', () => act(o.id, 'start-pack')));
   }
-  if (o.status === 'PACKING' || (o.status === 'PAID')) {
+  if (o.status === 'PACKING') {
     if (!o.packPhotoStub) {
       actions.appendChild(btn('📷 Pack photo — product + tote QR in frame', 'btn-red', () => capturePackPhoto(o)));
       actions.appendChild(btn('Demo stub (no camera)', 'btn-ghost', () => act(o.id, 'pack-photo')));
     } else if (!o.toteQrFromPackPhoto && !o.toteQrLinkedAt) {
       actions.appendChild(btn('Reshoot pack photo (need QR in frame)', 'btn-red', () => capturePackPhoto(o)));
-    } else if (o.packPhotoStub && !o.toteQrFromPackPhoto) {
+    } else {
       actions.appendChild(btn('Reshoot pack photo', 'btn-ghost', () => capturePackPhoto(o)));
     }
-    if (o.status === 'PACKING' && o.packPhotoStub && !o.sealConfirmed) {
+    if (o.packPhotoStub && !o.sealConfirmed) {
       actions.appendChild(btn('Confirm seal (zip+VOID)', 'btn-teal', () => act(o.id, 'seal')));
     }
-    if (o.sealConfirmed || o.status === 'PAID') {
+    if (o.sealConfirmed) {
       actions.appendChild(btn('Mark READY', 'btn-teal', () => act(o.id, 'ready')));
     }
   }
