@@ -96,7 +96,7 @@ function renderBrowse() {
           <span class="bracket bl"></span><span class="bracket br"></span>
           <div class="glass-inner">${productVisual(p)}</div>
           <button type="button" class="chase-icon-btn" aria-label="Hits still available for ${escapeHtml(p.title)}">
-            <svg class="chase-badge-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="11" height="11">
+            <svg class="chase-badge-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="16" height="16">
               <circle cx="12" cy="12" r="10" fill="none" stroke="#4fd1c5" stroke-width="2"/>
               <circle cx="12" cy="12" r="6.2" fill="none" stroke="#e8f7f5" stroke-width="2"/>
               <circle cx="12" cy="12" r="2.4" fill="#4fd1c5"/>

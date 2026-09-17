@@ -1432,7 +1432,7 @@ button.acct-link {
   width: auto;
   height: auto;
   min-height: 0;
-  padding: 3px 6px 3px 4px;
+  padding: 4px 6px 4px 5px;
   border-radius: 999px;
   border: 1px solid rgba(79, 209, 197, 0.55);
   background:
@@ -1454,7 +1454,9 @@ button.acct-link {
 .chase-icon-btn .chase-badge-svg {
   display: block;
   flex: none;
-  filter: drop-shadow(0 0 4px rgba(79, 209, 197, 0.85));
+  width: 16px;
+  height: 16px;
+  filter: drop-shadow(0 0 5px rgba(79, 209, 197, 0.95)) drop-shadow(0 0 10px rgba(79, 209, 197, 0.45));
 }
 .chase-icon-label {
   display: flex;
