@@ -2,10 +2,10 @@
   {
     "id": "2021-panini-score-football",
     "title": "2021 Panini Score Football",
-    "subtitle": "Sealed box · 40 cards/pack · 12 packs/box · Demo price — confirm with shop",
+    "subtitle": "Sealed box \u00b7 40 cards/pack \u00b7 12 packs/box \u00b7 Demo price \u2014 confirm with shop",
     "category": "Football",
     "price": 45,
-    "emoji": "🏈",
+    "emoji": "\ud83c\udfc8",
     "tile": "SC21",
     "windows": [
       {
@@ -29,15 +29,36 @@
         "units": 0
       }
     ],
-    "image": "/img/products/2021-panini-score-football.jpg"
+    "image": "/img/products/2021-panini-score-football.jpg",
+    "chaseTop3": [
+      {
+        "name": "Trevor Lawrence RC",
+        "note": "Jags QB #1 pick rookies still get chased in Score base & inserts.",
+        "rarity": "RC / Score Hot Rookies",
+        "potentialValue": 55
+      },
+      {
+        "name": "Justin Fields RC",
+        "note": "Bears dual-threat rookies \u2014 Fields Score cards move on every break.",
+        "rarity": "RC",
+        "potentialValue": 55
+      },
+      {
+        "name": "Mac Jones RC",
+        "note": "Patriot fan demand keeps Mac Score rookies on want-lists.",
+        "rarity": "RC",
+        "potentialValue": 55
+      }
+    ],
+    "chaseDemo": true
   },
   {
     "id": "2022-panini-score-football",
     "title": "2022 Panini Score Football",
-    "subtitle": "Sealed · 24 packs · 12 cards/pack · Demo price — confirm with shop",
+    "subtitle": "Sealed \u00b7 24 packs \u00b7 12 cards/pack \u00b7 Demo price \u2014 confirm with shop",
     "category": "Football",
     "price": 40,
-    "emoji": "🏈",
+    "emoji": "\ud83c\udfc8",
     "tile": "SC22",
     "windows": [
       {
@@ -66,15 +87,36 @@
         "units": 0
       }
     ],
-    "image": "/img/products/2022-panini-score-football.jpg"
+    "image": "/img/products/2022-panini-score-football.jpg",
+    "chaseTop3": [
+      {
+        "name": "Kenny Pickett RC",
+        "note": "Steelers QB class \u2014 Pickett Score rookies are the 2022 chase.",
+        "rarity": "RC",
+        "potentialValue": 55
+      },
+      {
+        "name": "Drake London RC",
+        "note": "Falcons WR1 upside; Score base + color parallels get pulled hard.",
+        "rarity": "RC",
+        "potentialValue": 55
+      },
+      {
+        "name": "Sauce Gardner RC",
+        "note": "DPOY buzz \u2014 Jets CB rookies spike every Score blaster night.",
+        "rarity": "RC / Artist's Proof",
+        "potentialValue": 55
+      }
+    ],
+    "chaseDemo": true
   },
   {
     "id": "2022-panini-absolute-football",
     "title": "2022 Panini Absolute Football",
-    "subtitle": "Sealed blaster · Demo price — confirm with shop",
+    "subtitle": "Sealed blaster \u00b7 Demo price \u2014 confirm with shop",
     "category": "Football",
     "price": 35,
-    "emoji": "🏈",
+    "emoji": "\ud83c\udfc8",
     "tile": "ABS",
     "windows": [
       {
@@ -103,15 +145,36 @@
         "units": 0
       }
     ],
-    "image": "/img/products/2022-panini-absolute-football.jpg"
+    "image": "/img/products/2022-panini-absolute-football.jpg",
+    "chaseTop3": [
+      {
+        "name": "Kenny Pickett Kaboom!",
+        "note": "Absolute's chase insert \u2014 Kaboom! QBs are the lottery ticket.",
+        "rarity": "Kaboom! SSP",
+        "potentialValue": 180
+      },
+      {
+        "name": "Garrett Wilson Absolute RC",
+        "note": "Jets WR rookies in Absolute glass + Kabooms.",
+        "rarity": "RC / Glass",
+        "potentialValue": 55
+      },
+      {
+        "name": "Breece Hall Absolute RC",
+        "note": "Explosive RB rookies \u2014 Absolute parallels fly.",
+        "rarity": "RC",
+        "potentialValue": 55
+      }
+    ],
+    "chaseDemo": true
   },
   {
     "id": "2022-panini-mosaic-football",
     "title": "2022 Panini Mosaic Football",
-    "subtitle": "Sealed box · Demo price — confirm with shop",
+    "subtitle": "Sealed box \u00b7 Demo price \u2014 confirm with shop",
     "category": "Football",
     "price": 55,
-    "emoji": "🏈",
+    "emoji": "\ud83c\udfc8",
     "tile": "MOS",
     "windows": [
       {
@@ -135,15 +198,36 @@
         "units": 0
       }
     ],
-    "image": "/img/products/2022-panini-mosaic-football.jpg"
+    "image": "/img/products/2022-panini-mosaic-football.jpg",
+    "chaseTop3": [
+      {
+        "name": "Kenny Pickett Mosaic RC",
+        "note": "Genesis & Mosaic reactive parallels on Pickett.",
+        "rarity": "Mosaic RC / Genesis",
+        "potentialValue": 55
+      },
+      {
+        "name": "Mosaic Kaboom! / Downtown",
+        "note": "Case-hit vibes \u2014 Mosaic chase inserts sell the box.",
+        "rarity": "SSP insert",
+        "potentialValue": 180
+      },
+      {
+        "name": "Sauce Gardner Mosaic RC",
+        "note": "Jets CB mosaics with reactive color still hot.",
+        "rarity": "RC / Reactive",
+        "potentialValue": 55
+      }
+    ],
+    "chaseDemo": true
   },
   {
     "id": "2021-panini-contenders-football",
     "title": "2021 Panini Contenders Football",
-    "subtitle": "Sealed blaster · Demo price — confirm with shop",
+    "subtitle": "Sealed blaster \u00b7 Demo price \u2014 confirm with shop",
     "category": "Football",
     "price": 40,
-    "emoji": "🏈",
+    "emoji": "\ud83c\udfc8",
     "tile": "CON",
     "windows": [
       {
@@ -172,15 +256,36 @@
         "units": 0
       }
     ],
-    "image": "/img/products/2021-panini-contenders-football.jpg"
+    "image": "/img/products/2021-panini-contenders-football.jpg",
+    "chaseTop3": [
+      {
+        "name": "Trevor Lawrence Ticket RC",
+        "note": "Contenders ticket autos & base tickets \u2014 Lawrence is the set.",
+        "rarity": "Ticket RC",
+        "potentialValue": 75
+      },
+      {
+        "name": "Justin Fields Contenders RC",
+        "note": "Fields ticket parallels + variation chase.",
+        "rarity": "Ticket / Cracked Ice",
+        "potentialValue": 75
+      },
+      {
+        "name": "Najee Harris Ticket RC",
+        "note": "Steelers RB tickets still pull well in Contenders.",
+        "rarity": "Ticket RC",
+        "potentialValue": 75
+      }
+    ],
+    "chaseDemo": true
   },
   {
     "id": "2022-panini-donruss-football",
     "title": "2022 Panini Donruss Football",
-    "subtitle": "Sealed blaster · Demo price — confirm with shop",
+    "subtitle": "Sealed blaster \u00b7 Demo price \u2014 confirm with shop",
     "category": "Football",
     "price": 35,
-    "emoji": "🏈",
+    "emoji": "\ud83c\udfc8",
     "tile": "DON",
     "windows": [
       {
@@ -209,15 +314,36 @@
         "units": 0
       }
     ],
-    "image": "/img/products/2022-panini-donruss-football.jpg"
+    "image": "/img/products/2022-panini-donruss-football.jpg",
+    "chaseTop3": [
+      {
+        "name": "Kenny Pickett Rated Rookie",
+        "note": "Classic Rated Rookie \u2014 Pickett anchors 2022 Donruss.",
+        "rarity": "Rated Rookie",
+        "potentialValue": 95
+      },
+      {
+        "name": "Drake London Rated Rookie",
+        "note": "WR Rated Rookies with Downtown upside nearby.",
+        "rarity": "Rated Rookie",
+        "potentialValue": 95
+      },
+      {
+        "name": "Donruss Downtown",
+        "note": "The Downtown SSP \u2014 reason people rip Donruss.",
+        "rarity": "Downtown SSP",
+        "potentialValue": 180
+      }
+    ],
+    "chaseDemo": true
   },
   {
     "id": "2022-panini-donruss-optic-football",
     "title": "2022 Panini Donruss Optic Football",
-    "subtitle": "Sealed blaster · Demo price — confirm with shop",
+    "subtitle": "Sealed blaster \u00b7 Demo price \u2014 confirm with shop",
     "category": "Football",
     "price": 45,
-    "emoji": "🏈",
+    "emoji": "\ud83c\udfc8",
     "tile": "OPT",
     "windows": [
       {
@@ -241,15 +367,36 @@
         "units": 0
       }
     ],
-    "image": "/img/products/2022-panini-donruss-optic-football.jpg"
+    "image": "/img/products/2022-panini-donruss-optic-football.jpg",
+    "chaseTop3": [
+      {
+        "name": "Kenny Pickett Optic RR",
+        "note": "Optic Rated Rookie + Holo \u2014 premium Pickett chase.",
+        "rarity": "Optic RR / Holo",
+        "potentialValue": 95
+      },
+      {
+        "name": "Optic Downtown",
+        "note": "Optic Downtown case hits \u2014 the gold-star pull.",
+        "rarity": "Downtown SSP",
+        "potentialValue": 180
+      },
+      {
+        "name": "Garrett Wilson Optic RC",
+        "note": "Jets WR Optic color still on fire.",
+        "rarity": "Optic RC",
+        "potentialValue": 55
+      }
+    ],
+    "chaseDemo": true
   },
   {
     "id": "2022-topps-chrome-baseball",
     "title": "2022 Topps Chrome Baseball",
-    "subtitle": "Sealed blaster · Demo price — confirm with shop",
+    "subtitle": "Sealed blaster \u00b7 Demo price \u2014 confirm with shop",
     "category": "Baseball",
     "price": 50,
-    "emoji": "⚾",
+    "emoji": "\u26be",
     "tile": "CHR",
     "windows": [
       {
@@ -278,15 +425,36 @@
         "units": 0
       }
     ],
-    "image": "/img/products/2022-topps-chrome-baseball.jpg"
+    "image": "/img/products/2022-topps-chrome-baseball.jpg",
+    "chaseTop3": [
+      {
+        "name": "Julio Rodr\u00edguez Chrome RC",
+        "note": "Mariners star \u2014 Chrome Julio is the 2022 baseball chase.",
+        "rarity": "Chrome RC / Refractor",
+        "potentialValue": 95
+      },
+      {
+        "name": "Bobby Witt Jr. Chrome RC",
+        "note": "Royals shortstop rookies in Chrome Refractor.",
+        "rarity": "Chrome RC",
+        "potentialValue": 95
+      },
+      {
+        "name": "Adley Rutschman Chrome RC",
+        "note": "O's catcher Chrome \u2014 Refractors and Superfractors.",
+        "rarity": "Chrome RC / Refractor",
+        "potentialValue": 95
+      }
+    ],
+    "chaseDemo": true
   },
   {
     "id": "2023-topps-series-1-baseball",
     "title": "2023 Topps Series 1 Baseball",
-    "subtitle": "Sealed blaster · Demo price — confirm with shop",
+    "subtitle": "Sealed blaster \u00b7 Demo price \u2014 confirm with shop",
     "category": "Baseball",
     "price": 30,
-    "emoji": "⚾",
+    "emoji": "\u26be",
     "tile": "S1",
     "windows": [
       {
@@ -315,15 +483,36 @@
         "units": 0
       }
     ],
-    "image": "/img/products/2023-topps-series-1-baseball.jpg"
+    "image": "/img/products/2023-topps-series-1-baseball.jpg",
+    "chaseTop3": [
+      {
+        "name": "Corbin Carroll RC",
+        "note": "D-backs ROY \u2014 Series 1 Carroll is the flagship chase.",
+        "rarity": "RC / Golden Mirror",
+        "potentialValue": 55
+      },
+      {
+        "name": "Gunnar Henderson RC",
+        "note": "O's shortstop rookies in Series 1 base & inserts.",
+        "rarity": "RC",
+        "potentialValue": 55
+      },
+      {
+        "name": "Elly De La Cruz (SP / variation)",
+        "note": "Variation hunters \u2014 Series 1 short prints heat up Elly.",
+        "rarity": "SP / Image variation",
+        "potentialValue": 45
+      }
+    ],
+    "chaseDemo": true
   },
   {
     "id": "2022-leaf-draft-baseball",
     "title": "2022 Leaf Draft Baseball",
-    "subtitle": "Sealed box · Demo price — confirm with shop",
+    "subtitle": "Sealed box \u00b7 Demo price \u2014 confirm with shop",
     "category": "Baseball",
     "price": 40,
-    "emoji": "⚾",
+    "emoji": "\u26be",
     "tile": "DFT",
     "windows": [
       {
@@ -346,15 +535,36 @@
         "label": "Today 5-7pm",
         "units": 0
       }
-    ]
+    ],
+    "chaseTop3": [
+      {
+        "name": "Jackson Chourio Draft",
+        "note": "Brewers prospect heat \u2014 Leaf Draft autos & base.",
+        "rarity": "Prospect / Auto",
+        "potentialValue": 35
+      },
+      {
+        "name": "Druw Jones Draft",
+        "note": "D-backs toolsy OF \u2014 Draft parallels get chased.",
+        "rarity": "Draft RC",
+        "potentialValue": 35
+      },
+      {
+        "name": "Elijah Green Draft",
+        "note": "Nats speed/power \u2014 Leaf Draft color.",
+        "rarity": "Draft / Parallel",
+        "potentialValue": 35
+      }
+    ],
+    "chaseDemo": true
   },
   {
     "id": "leaf-metal-legends-wrestling",
     "title": "Leaf Metal Legends Wrestling",
-    "subtitle": "Sealed box · Demo price — confirm with shop",
+    "subtitle": "Sealed box \u00b7 Demo price \u2014 confirm with shop",
     "category": "Wrestling",
     "price": 45,
-    "emoji": "🤼",
+    "emoji": "\ud83e\udd3c",
     "tile": "MET",
     "windows": [
       {
@@ -383,15 +593,36 @@
         "units": 0
       }
     ],
-    "image": "/img/products/leaf-metal-legends-wrestling.jpg"
+    "image": "/img/products/leaf-metal-legends-wrestling.jpg",
+    "chaseTop3": [
+      {
+        "name": "Hulk Hogan Metal Auto",
+        "note": "Legends metal \u2014 Hogan signatures move the box.",
+        "rarity": "Metal Auto",
+        "potentialValue": 120
+      },
+      {
+        "name": "The Rock Leaf Metal",
+        "note": "Rock base + color metal cards for wrestling PCs.",
+        "rarity": "Metal base / color",
+        "potentialValue": 120
+      },
+      {
+        "name": "Stone Cold Steve Austin",
+        "note": "Austin metal inserts \u2014 Austin 3:16 chase energy.",
+        "rarity": "Metal insert",
+        "potentialValue": 45
+      }
+    ],
+    "chaseDemo": true
   },
   {
     "id": "shop-upload-test-blaster-udtq",
     "title": "Shop Upload Test Blaster",
-    "subtitle": "Sealed blaster · Demo price — confirm with shop",
+    "subtitle": "Sealed blaster \u00b7 Demo price \u2014 confirm with shop",
     "category": "Football",
     "price": 42,
-    "emoji": "🏈",
+    "emoji": "\ud83c\udfc8",
     "tile": "SHOP",
     "image": null,
     "hidden": false,
@@ -421,6 +652,27 @@
         "label": "Today 5-7pm",
         "units": 0
       }
-    ]
+    ],
+    "chaseTop3": [
+      {
+        "name": "Demo Chase Star #1",
+        "note": "Beta placeholder \u2014 top hit people say they want from this test SKU.",
+        "rarity": "Demo",
+        "potentialValue": 40
+      },
+      {
+        "name": "Demo Chase Star #2",
+        "note": "Second most-wanted unhit target (demo list).",
+        "rarity": "Demo",
+        "potentialValue": 40
+      },
+      {
+        "name": "Demo Chase Star #3",
+        "note": "Third chase teaser for shop-upload test blaster.",
+        "rarity": "Demo",
+        "potentialValue": 40
+      }
+    ],
+    "chaseDemo": true
   }
 ]

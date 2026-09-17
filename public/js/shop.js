@@ -726,20 +726,31 @@ function wireInventoryCapture() {
   barBtn.addEventListener('click', () => startBarcodeScan());
 }
 
-function onInvPhotoPicked(input) {
+async function onInvPhotoPicked(input) {
   const file = input.files && input.files[0];
   if (!file) return;
-  invSelectedFile = file;
   const preview = qs('#inv-preview');
-  const url = URL.createObjectURL(file);
+  const title = qs('#inv-title');
+
+  // Prefer galaxy composite before preview/save (shops upload white/light bg).
+  let outFile = file;
+  if (typeof BoxComposite !== 'undefined') {
+    try {
+      toast('Framing box on galaxy…');
+      outFile = await BoxComposite.compositeFile(file);
+    } catch (err) {
+      console.warn('Galaxy composite failed, using original', err);
+      outFile = file;
+    }
+  }
+  invSelectedFile = outFile;
+  if (preview._blobUrl) URL.revokeObjectURL(preview._blobUrl);
+  const url = URL.createObjectURL(outFile);
+  preview._blobUrl = url;
   preview.src = url;
   preview.classList.add('on');
-  // Autofocus title after photo
-  const title = qs('#inv-title');
-  if (title) {
-    setTimeout(() => title.focus(), 50);
-  }
-  toast('Photo ready — confirm title, price & windows');
+  if (title) setTimeout(() => title.focus(), 50);
+  toast(outFile !== file ? 'Galaxy frame ready — confirm title, price & windows' : 'Photo ready — confirm title, price & windows');
 }
 
 function setLinkedBarcode(code) {

@@ -10,24 +10,29 @@
 </head>
 <body class="machine-body">
   <div class="app">
-    <header class="marquee marquee-account">
-      <div class="brand-row brand-row-spread">
-        <div class="brand-left">
-          <img class="brand-mark-img" src="/img/logo.png" alt="" width="36" height="36" />
-          <div class="name"><span class="name-core">Vendi</span><span class="accent-teal">Port</span></div>
+    <div class="bay-glass track-bay">
+      <img class="bay-glass-frame" src="/img/bay-glass-frame.png?v=36clear" srcset="/img/bay-glass-frame.png?v=36clear" alt="" aria-hidden="true" />
+      <a class="tip-tote-promo" href="/img/vendiport-soft-tote-promo.png" target="_blank" rel="noopener" aria-label="Your sealed VendiPort tote">
+        <img src="/img/vendiport-soft-tote-promo.png" alt="VendiPort sealed tote — same-day local" width="120" height="68" />
+      </a>
+      <header class="marquee marquee-account">
+        <div class="brand-row brand-row-spread">
+          <div class="brand-left">
+            <img class="brand-mark-img" src="/img/logo.png" alt="" width="36" height="36" />
+            <div class="name"><span class="name-core">Vendi</span><span class="accent-teal">Port</span></div>
+          </div>
+          <div id="account-chip" class="account-chip"></div>
         </div>
-        <div id="account-chip" class="account-chip"></div>
+        <div class="tag">TRACK ORDER</div>
+        <div class="leds" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+      </header>
+      <div class="stream-wrap">
+        <div class="panel-label">Order stream</div>
+        <div id="track-stream" class="vp-stream"></div>
       </div>
-      <div class="tag">TRACK ORDER</div>
-      <div class="leds" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
-    </header>
+    </div>
 
     <p class="sub"><a class="back" href="/">← Machine</a></p>
-
-    <div class="stream-wrap">
-      <div class="panel-label">Order stream</div>
-      <div id="track-stream" class="vp-stream"></div>
-    </div>
 
     <div id="track-body">
       <div class="empty">Loading order…</div>

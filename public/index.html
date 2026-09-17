@@ -12,20 +12,32 @@
   <div class="app">
     <!-- BROWSE -->
     <section id="view-browse">
-      <header class="marquee marquee-account">
-        <div class="brand-row brand-row-spread">
-          <div class="brand-left">
-            <img class="brand-mark-img" src="/img/logo.png" alt="VendiPort" width="36" height="36" />
-            <div class="name"><span class="name-core">Vendi</span><span class="accent-teal">Port</span></div>
+      <div class="bay-glass">
+        <img class="bay-glass-frame" src="/img/bay-glass-frame.png?v=39curve" srcset="/img/bay-glass-frame.png?v=39curve" alt="" aria-hidden="true" />
+        <header class="marquee marquee-account">
+          <div class="brand-row brand-row-spread">
+            <div class="brand-left">
+              <img class="brand-mark-img" src="/img/logo.png" alt="VendiPort" width="36" height="36" />
+              <div class="name"><span class="name-core">Vendi</span><span class="accent-teal">Port</span></div>
+            </div>
+            <div id="account-chip" class="account-chip"></div>
           </div>
-          <div id="account-chip" class="account-chip"></div>
+          <div class="tag">VIRTUAL MACHINE</div>
+          <div class="leds" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+          <p class="top-targets-hint" aria-label="Bull’s-eye equals Hits still available">
+            <svg class="chase-badge-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="14" height="14">
+              <circle cx="12" cy="12" r="10" fill="none" stroke="#4fd1c5" stroke-width="2"/>
+              <circle cx="12" cy="12" r="6.2" fill="none" stroke="#e8f7f5" stroke-width="2"/>
+              <circle cx="12" cy="12" r="2.4" fill="#4fd1c5"/>
+            </svg>
+            <span class="tt-eq" aria-hidden="true">=</span>
+            <span class="tt-name">Hits still available</span>
+          </p>
+        </header>
+        <div class="stream-wrap">
+          <div class="panel-label">Buyer stream</div>
+          <div id="buyer-stream-browse" class="vp-stream"></div>
         </div>
-        <div class="tag">VIRTUAL MACHINE</div>
-        <div class="leds" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
-      </header>
-      <div class="stream-wrap">
-        <div class="panel-label">Buyer stream</div>
-        <div id="buyer-stream-browse" class="vp-stream"></div>
       </div>
       <div class="machine">
         <div class="machine-glass-pane">
@@ -40,22 +52,25 @@
 
     <!-- CHECKOUT -->
     <section id="view-checkout" class="hidden">
-      <header class="marquee marquee-account">
-        <div class="brand-row brand-row-spread">
-          <div class="brand-left">
-            <img class="brand-mark-img" src="/img/logo.png" alt="VendiPort" width="36" height="36" />
-            <div class="name"><span class="name-core">Vendi</span><span class="accent-teal">Port</span></div>
+      <div class="bay-glass">
+        <img class="bay-glass-frame" src="/img/bay-glass-frame.png?v=39curve" srcset="/img/bay-glass-frame.png?v=39curve" alt="" aria-hidden="true" />
+        <header class="marquee marquee-account">
+          <div class="brand-row brand-row-spread">
+            <div class="brand-left">
+              <img class="brand-mark-img" src="/img/logo.png" alt="VendiPort" width="36" height="36" />
+              <div class="name"><span class="name-core">Vendi</span><span class="accent-teal">Port</span></div>
+            </div>
+            <div class="account-chip"></div>
           </div>
-          <div class="account-chip"></div>
+          <div class="tag">CHECKOUT BAY</div>
+          <div class="leds" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+        </header>
+        <div class="stream-wrap">
+          <div class="panel-label">Buyer stream</div>
+          <div id="buyer-stream-checkout" class="vp-stream"></div>
         </div>
-        <div class="tag">CHECKOUT BAY</div>
-        <div class="leds" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
-      </header>
-      <button type="button" class="back" id="back-browse">← Machine</button>
-      <div class="stream-wrap">
-        <div class="panel-label">Buyer stream</div>
-        <div id="buyer-stream-checkout" class="vp-stream"></div>
       </div>
+      <button type="button" class="back" id="back-browse">← Machine</button>
 
       <div class="co-machine">
         <div class="co-hero">
@@ -107,20 +122,23 @@
 
     <!-- PAID -->
     <section id="view-paid" class="hidden">
-      <header class="marquee marquee-account">
-        <div class="brand-row brand-row-spread">
-          <div class="brand-left">
-            <img class="brand-mark-img" src="/img/logo.png" alt="VendiPort" width="36" height="36" />
-            <div class="name"><span class="name-core">Vendi</span><span class="accent-teal">Port</span></div>
+      <div class="bay-glass">
+        <img class="bay-glass-frame" src="/img/bay-glass-frame.png?v=39curve" srcset="/img/bay-glass-frame.png?v=39curve" alt="" aria-hidden="true" />
+        <header class="marquee marquee-account">
+          <div class="brand-row brand-row-spread">
+            <div class="brand-left">
+              <img class="brand-mark-img" src="/img/logo.png" alt="VendiPort" width="36" height="36" />
+              <div class="name"><span class="name-core">Vendi</span><span class="accent-teal">Port</span></div>
+            </div>
+            <div class="account-chip"></div>
           </div>
-          <div class="account-chip"></div>
+          <div class="tag">ORDER LOCKED</div>
+          <div class="leds" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+        </header>
+        <div class="stream-wrap">
+          <div class="panel-label">Order stream</div>
+          <div id="buyer-stream-paid" class="vp-stream"></div>
         </div>
-        <div class="tag">ORDER LOCKED</div>
-        <div class="leds" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
-      </header>
-      <div class="stream-wrap">
-        <div class="panel-label">Order stream</div>
-        <div id="buyer-stream-paid" class="vp-stream"></div>
       </div>
 
       <div class="co-machine">
@@ -166,6 +184,9 @@
           <div class="panel-label">Door handoff · tote-bag QR</div>
           <p style="font-size:12px;color:var(--muted);margin:0 0 6px">After pickup, open this link. Scan or upload the <strong>QR on your tote bag</strong> to accept (or refuse if seal/QR fail).</p>
           <a class="handoff-link-box" id="paid-handoff" href="#"></a>
+          <aside class="sale-tote-promo" aria-label="Your sealed VendiPort tote">
+            <img src="/img/vendiport-soft-tote-promo.png" alt="VendiPort sealed tote — same-day local" width="640" height="360" />
+          </aside>
           <p class="footer-note" style="text-align:left;margin-top:8px">Fulfillment: <a href="/shop">/shop</a></p>
         </div>
       </div>
@@ -175,8 +196,41 @@
       Live beta: <a href="https://vendiport-beta.onrender.com" rel="noopener">vendiport-beta.onrender.com</a>
     </p>
   </div>
+
+  <!-- Hits window: pops up; can minimize to a little floating chip -->
+  <div id="chase-overlay" class="chase-overlay hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="chase-overlay-title">
+    <div class="chase-sheet" id="chase-sheet">
+      <div class="chase-sheet-top">
+        <div class="chase-sheet-brand">
+          <svg class="chase-badge-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="14" height="14">  <circle cx="12" cy="12" r="10" fill="none" stroke="#4fd1c5" stroke-width="2"/>  <circle cx="12" cy="12" r="6.2" fill="none" stroke="#e8f7f5" stroke-width="2"/>  <circle cx="12" cy="12" r="2.4" fill="#4fd1c5"/></svg>
+          <div>
+            <h2 id="chase-overlay-title">Hits still available</h2>
+            <p class="sub" id="chase-overlay-sub"></p>
+          </div>
+        </div>
+        <div class="chase-sheet-actions">
+          <button type="button" class="chase-sheet-min" id="chase-overlay-min" aria-label="Minimize" title="Minimize">–</button>
+          <button type="button" class="chase-sheet-close" id="chase-overlay-close" aria-label="Close">×</button>
+        </div>
+      </div>
+      <div class="chase-sheet-body" id="chase-sheet-body">
+        <ol class="chase-overlay-list" id="chase-overlay-list"></ol>
+        <p class="chase-demo-note" id="chase-overlay-demo">Demo beta — top cards of value that are potentially still available (illustrative $, not live comps or guaranteed pulls).</p>
+      </div>
+    </div>
+  </div>
+  <button type="button" id="chase-mini" class="chase-mini hidden" aria-label="Restore Hits still available window">
+    <svg class="chase-badge-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="12" height="12">
+      <circle cx="12" cy="12" r="10" fill="none" stroke="#4fd1c5" stroke-width="2"/>
+      <circle cx="12" cy="12" r="6.2" fill="none" stroke="#e8f7f5" stroke-width="2"/>
+      <circle cx="12" cy="12" r="2.4" fill="#4fd1c5"/>
+    </svg>
+    <span class="chase-mini-label">Hits</span>
+    <span class="chase-mini-restore" aria-hidden="true">▣</span>
+  </button>
   <script src="/js/api.js"></script>
   <script src="/js/session.js"></script>
+  <script src="/js/box-composite.js"></script>
   <script src="/js/buyer.js"></script>
 </body>
 </html>

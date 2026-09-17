@@ -10,24 +10,26 @@
 </head>
 <body class="machine-body">
   <div class="app">
-    <header class="marquee marquee-account">
-      <div class="brand-row brand-row-spread">
-        <div class="brand-left">
-          <img class="brand-mark-img" src="/img/logo.png" alt="VendiPort" width="36" height="36" />
-          <div class="name"><span class="name-core">Vendi</span><span class="accent-teal">Port</span></div>
+    <div class="bay-glass">
+      <img class="bay-glass-frame" src="/img/bay-glass-frame.png?v=36clear" srcset="/img/bay-glass-frame.png?v=36clear" alt="" aria-hidden="true" />
+      <header class="marquee marquee-account">
+        <div class="brand-row brand-row-spread">
+          <div class="brand-left">
+            <img class="brand-mark-img" src="/img/logo.png" alt="VendiPort" width="36" height="36" />
+            <div class="name"><span class="name-core">Vendi</span><span class="accent-teal">Port</span></div>
+          </div>
+          <div id="account-chip" class="account-chip"></div>
         </div>
-        <div id="account-chip" class="account-chip"></div>
+        <div class="tag">ACCOUNT</div>
+        <div class="leds" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+      </header>
+      <div class="stream-wrap">
+        <div class="panel-label">Membership stream</div>
+        <div id="member-stream" class="vp-stream"></div>
       </div>
-      <div class="tag">ACCOUNT</div>
-      <div class="leds" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
-    </header>
+    </div>
 
     <p class="sub"><a class="back" href="/">← Machine</a></p>
-
-    <div class="stream-wrap">
-      <div class="panel-label">Membership stream</div>
-      <div id="member-stream" class="vp-stream"></div>
-    </div>
 
     <!-- HUB — familiar marketplace account menu -->
     <section id="view-hub" class="co-machine">

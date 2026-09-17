@@ -31,6 +31,8 @@ npm start
 
 Shop tabs: **Jobs · Inventory · Windows · Stats** (orders today by status, units listed, own-driver).
 
+Product photos: shops should upload the sealed box on a **white / light** background — VendiPort white-keys the subject onto a shared galaxy frame automatically.
+
 ## Deploy
 
 See **[DEPLOY.md](./DEPLOY.md)** (Render free + GoDaddy DNS for vendiport.com later).

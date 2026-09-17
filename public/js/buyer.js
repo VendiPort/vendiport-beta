@@ -35,10 +35,38 @@ function productVisual(p) {
   const tileCode = p.tile || (p.category || 'VP').slice(0, 3).toUpperCase();
   if (p.image || p.productImage) {
     const src = p.image || p.productImage;
-    return `<img src="${escapeHtml(src)}" alt="" loading="lazy" /><div class="glass-sheen" aria-hidden="true"></div>`;
+    const id = p.id || src;
+    return `<img class="box-photo" data-box-src="${escapeHtml(src)}" data-box-id="${escapeHtml(id)}" src="${escapeHtml(src)}" alt="" loading="lazy" />`;
   }
   const emoji = p.emoji || p.productEmoji || '🎴';
-  return `<div class="fallback-tile"><div class="emoji">${emoji}</div><div class="code">${escapeHtml(tileCode)}</div></div><div class="glass-sheen" aria-hidden="true"></div>`;
+  return `<div class="fallback-tile"><div class="emoji">${emoji}</div><div class="code">${escapeHtml(tileCode)}</div></div>`;
+}
+
+/** Apply galaxy composite to .box-photo imgs inside root (live cache by product id). */
+async function applyGalaxyComposites(root) {
+  const scope = root || document;
+  const imgs = scope.querySelectorAll('img.box-photo[data-box-src]');
+  if (!imgs.length || typeof BoxComposite === 'undefined') return;
+  await Promise.all(
+    Array.from(imgs).map(async (img) => {
+      if (img.dataset.galaxyDone === '1') return;
+      const id = img.dataset.boxId || img.dataset.boxSrc;
+      const src = img.dataset.boxSrc;
+      const glass = img.closest('.glass-inner');
+      try {
+        const url = await BoxComposite.getComposited(id, src);
+        img.src = url;
+        img.dataset.galaxyDone = '1';
+        img.classList.add('galaxy-on');
+        if (glass) {
+          glass.classList.remove('galaxy-fallback');
+          glass.classList.add('galaxy-ready');
+        }
+      } catch (err) {
+        if (glass) glass.classList.add('galaxy-fallback');
+      }
+    })
+  );
 }
 
 function renderBrowse() {
@@ -62,10 +90,20 @@ function renderBrowse() {
     const slot = document.createElement('article');
     slot.className = 'vslot';
     slot.innerHTML = `
-      <div class="glass-window">
-        <span class="bracket tl"></span><span class="bracket tr"></span>
-        <span class="bracket bl"></span><span class="bracket br"></span>
-        <div class="glass-inner">${productVisual(p)}</div>
+      <div class="slot-showcase">
+        <div class="glass-window">
+          <span class="bracket tl"></span><span class="bracket tr"></span>
+          <span class="bracket bl"></span><span class="bracket br"></span>
+          <div class="glass-inner">${productVisual(p)}</div>
+          <button type="button" class="chase-icon-btn" aria-label="Hits still available for ${escapeHtml(p.title)}">
+            <svg class="chase-badge-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="11" height="11">
+              <circle cx="12" cy="12" r="10" fill="none" stroke="#4fd1c5" stroke-width="2"/>
+              <circle cx="12" cy="12" r="6.2" fill="none" stroke="#e8f7f5" stroke-width="2"/>
+              <circle cx="12" cy="12" r="2.4" fill="#4fd1c5"/>
+            </svg>
+            <span class="chase-icon-label" aria-hidden="true"><span>Hits</span><span>available</span></span>
+          </button>
+        </div>
       </div>
       <div class="rail" aria-hidden="true"></div>
       <div class="slot-meta-bar">
@@ -78,8 +116,103 @@ function renderBrowse() {
         Get it<span class="hint">Push</span>
       </button>`;
     slot.querySelector('.push-tab').addEventListener('click', () => openCheckout(p.id));
+    const chaseBtn = slot.querySelector('.chase-icon-btn');
+    if (chaseBtn) {
+      chaseBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        openChaseOverlay(p);
+      });
+    }
     list.appendChild(slot);
   }
+  applyGalaxyComposites(list);
+}
+
+function openChaseOverlay(product) {
+  const overlay = qs('#chase-overlay');
+  if (!overlay) return;
+  const mini = qs('#chase-mini');
+  if (mini) mini.classList.add('hidden');
+  overlay.classList.remove('minimized');
+  const chase = Array.isArray(product.chaseTop3) ? product.chaseTop3.slice(0, 3) : [];
+  qs('#chase-overlay-title').textContent = 'Hits still available';
+  qs('#chase-overlay-sub').textContent =
+    (product.title || '') + ' · top cards of value that may still be in this sealed box';
+  const list = qs('#chase-overlay-list');
+  list.innerHTML = '';
+  if (!chase.length) {
+    list.innerHTML = '<li class="chase-overlay-item"><div class="nm">No hits listed yet</div><div class="note">Demo beta — check back soon.</div></li>';
+  } else {
+    // Highest potential value first among the seeded top chase cards
+    const ranked = chase
+      .map((c, idx) => ({ c, idx, val: Number(c.potentialValue) }))
+      .sort((a, b) => {
+        const av = Number.isFinite(a.val) ? a.val : -1;
+        const bv = Number.isFinite(b.val) ? b.val : -1;
+        if (bv !== av) return bv - av;
+        return a.idx - b.idx;
+      });
+    ranked.forEach((row, i) => {
+      const c = row.c;
+      const li = document.createElement('li');
+      li.className = 'chase-overlay-item';
+      const val = row.val;
+      const valHtml = Number.isFinite(val)
+        ? `<div class="potential-value"><span class="pv-label">Potential value</span><span class="pv-amt">${money(val)}</span></div>`
+        : '';
+      li.innerHTML = `
+        <div class="chase-overlay-rank">${i + 1}</div>
+        <div class="chase-overlay-body">
+          <div class="nm-row">
+            <div class="nm">${escapeHtml(c.name)}</div>
+            ${valHtml}
+          </div>
+          <div class="rarity">${c.rarity ? escapeHtml(c.rarity) + ' · ' : ''}potentially still available</div>
+          <div class="note">${escapeHtml(c.note || '')}</div>
+        </div>`;
+      list.appendChild(li);
+    });
+  }
+  const demo = qs('#chase-overlay-demo');
+  if (demo) demo.classList.toggle('hidden', !(product.chaseDemo || chase.length));
+  overlay.classList.remove('hidden');
+  overlay.setAttribute('aria-hidden', 'false');
+  const miniLbl = qs('.chase-mini-label');
+  if (miniLbl) miniLbl.textContent = 'Hits';
+}
+
+function minimizeChaseOverlay() {
+  const overlay = qs('#chase-overlay');
+  const mini = qs('#chase-mini');
+  if (!overlay || overlay.classList.contains('hidden')) return;
+  overlay.classList.add('hidden');
+  overlay.classList.add('minimized');
+  overlay.setAttribute('aria-hidden', 'true');
+  if (mini) {
+    mini.classList.remove('hidden');
+    mini.setAttribute('aria-expanded', 'false');
+  }
+}
+
+function restoreChaseOverlay() {
+  const overlay = qs('#chase-overlay');
+  const mini = qs('#chase-mini');
+  if (!overlay) return;
+  if (mini) mini.classList.add('hidden');
+  overlay.classList.remove('minimized');
+  overlay.classList.remove('hidden');
+  overlay.setAttribute('aria-hidden', 'false');
+}
+
+function closeChaseOverlay() {
+  const overlay = qs('#chase-overlay');
+  const mini = qs('#chase-mini');
+  if (!overlay) return;
+  overlay.classList.add('hidden');
+  overlay.classList.remove('minimized');
+  overlay.setAttribute('aria-hidden', 'true');
+  if (mini) mini.classList.add('hidden');
 }
 
 async function openCheckout(productId) {
@@ -125,6 +258,7 @@ function renderCheckout() {
   const t = calcTotals();
 
   qs('#co-visual').innerHTML = productVisual(p);
+  applyGalaxyComposites(qs('#co-visual'));
   qs('#co-title').textContent = p.title;
   qs('#co-sub').textContent = p.subtitle || '';
   qs('#co-order').textContent = money(t.product);
@@ -304,6 +438,20 @@ document.addEventListener('DOMContentLoaded', () => {
     loadBrowse();
   });
   qs('#pay-btn').addEventListener('click', payStub);
+  const chaseOverlay = qs('#chase-overlay');
+  if (chaseOverlay) {
+    qs('#chase-overlay-close').addEventListener('click', closeChaseOverlay);
+    const minBtn = qs('#chase-overlay-min');
+    if (minBtn) minBtn.addEventListener('click', (e) => { e.stopPropagation(); minimizeChaseOverlay(); });
+    const mini = qs('#chase-mini');
+    if (mini) mini.addEventListener('click', restoreChaseOverlay);
+    chaseOverlay.addEventListener('click', (e) => {
+      if (e.target === chaseOverlay) minimizeChaseOverlay();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !chaseOverlay.classList.contains('hidden')) closeChaseOverlay();
+    });
+  }
   renderAccountChip();
   loadPayConfig().catch(() => {});
   loadBrowse().catch((e) => toast(e.message));

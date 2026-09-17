@@ -565,6 +565,16 @@ async function handleApi(req, res, pathname) {
           ? (p.windows || []).map((w) => ({ id: w.id, label: w.label, units: w.units }))
           : resolveProductWindowsForBuyer(p, shop);
         const earliest = windows.find((w) => w.units > 0) || windows[0] || null;
+        const chaseTop3 = Array.isArray(p.chaseTop3)
+          ? p.chaseTop3.slice(0, 3).map((c) => ({
+              name: c.name || '',
+              note: c.note || '',
+              rarity: c.rarity || null,
+              potentialValue: Number.isFinite(Number(c.potentialValue))
+                ? Number(c.potentialValue)
+                : null,
+            }))
+          : [];
         return {
           id: p.id,
           title: p.title,
@@ -576,6 +586,8 @@ async function handleApi(req, res, pathname) {
           image: p.image || null,
           barcode: p.barcode || null,
           hidden: !!p.hidden,
+          chaseTop3,
+          chaseDemo: !!p.chaseDemo || chaseTop3.length > 0,
           earliestWindow: earliest
             ? { id: earliest.id, label: earliest.label, units: earliest.units }
             : null,
