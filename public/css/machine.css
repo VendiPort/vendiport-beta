@@ -1000,11 +1000,11 @@ button.acct-link {
 }
 
 .marquee .brand-mark-img, .brand-mark-img {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border-radius: 10px;
   object-fit: cover;
-  box-shadow: 0 0 12px rgba(255,90,95,0.35), 0 0 10px rgba(79,209,197,0.35);
+  box-shadow: 0 0 12px rgba(160,75,255,0.35), 0 0 10px rgba(79,209,197,0.35);
 }
 
 
