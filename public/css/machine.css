@@ -1938,3 +1938,11 @@ button.acct-link {
   color: #6b7588;
   line-height: 1.35;
 }
+
+/* Approved logo lockup replaces mark + text in headers */
+.brand-lockup-img {
+  height: 56px;
+  width: auto;
+  display: block;
+  mix-blend-mode: screen;
+}
