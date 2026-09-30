@@ -1941,8 +1941,7 @@ button.acct-link {
 
 /* Approved logo lockup replaces mark + text in headers */
 .brand-lockup-img {
-  height: 56px;
+  height: 52px;
   width: auto;
   display: block;
-  mix-blend-mode: screen;
 }
