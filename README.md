@@ -67,7 +67,7 @@ Runs **without any Stripe keys** (Pay stub). To enable **test-mode** Checkout la
 **Pages:** `/admin` `/collection` `/my-collection` `/my-breaks` `/radar` `/breaks` `/breaks/<id>`
 **API (under `/api`):** `area`, `buyer/:id`, `search`, `events`, `radar`, `wanted`, `wanted/have`, `shop/{status,pause,earnings,verify}`, `orders/:id/{buyer,notify,arrive-proof,pack-checklist,dispute,rate}`, `collection`, `breaks` (+`/public`, `/mine`, `/:id`, `/:id/card.svg`, `/:id/share`, `/:id/view`), `admin/*`.
 
-**Env vars:** `ADMIN_PASSCODE` (default `vendiport-admin-dev`), `SERVICE_ZIPS` (comma list overriding the demo Bay Area service ZIPs), `REQUIRE_PACK_CHECKLIST` (`0` to not require the checklist before READY).
+**Env vars:** `ADMIN_PASSCODE` (default `Montana`), `SERVICE_ZIPS` (comma list overriding the demo Bay Area service ZIPs), `REQUIRE_PACK_CHECKLIST` (`0` to not require the checklist before READY).
 
 **Tests:** `npm test` (smoke tests on a temp data dir).
 **Demo data:** seeded into `extras.json` in `DATA_DIR` on first run (tagged `demo:true`; "Reset demo data" in `/admin`). Render's free disk resets, so it reseeds.

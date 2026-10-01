@@ -1,6 +1,6 @@
 # VendiPort — Owner Diagnostics (`/admin`)
 
-Open `https://vendiport-beta.onrender.com/admin`. Enter the passcode (env `ADMIN_PASSCODE`, default `vendiport-admin-dev` — **set your own on Render**).
+Open `https://vendiport-beta.onrender.com/admin`. Enter the passcode (env `ADMIN_PASSCODE`, default `Montana` — **set your own on Render**).
 Every number is tagged **LIVE** (computed from real orders/follows in the JSON state) or **DEMO** (seeded sample data so the dashboard looks alive; flagged `demo:true`, wiped with "Reset demo data").
 
 | Tab | What it shows | LIVE | DEMO |
