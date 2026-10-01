@@ -1214,6 +1214,9 @@ async function handleApi(req, res, pathname) {
       order.toteQrFromPackPhoto = false;
     }
 
+    if (order.packAfter) return sendError(res, 409, 'The bag is already sealed (Photo 2 done) — Photo 1 can’t be replaced.');
+    // Photo 1 = original QR scan (product on the bag QR, before sealing). Starts packing and links the bag QR.
+    order.packBefore = { photo: packPath || null, stub: !packPath, at: new Date().toISOString(), qr: order.toteQrPayload };
     order.updatedAt = new Date().toISOString();
     saveOrder(order);
     return send(res, 200, {
@@ -1242,23 +1245,9 @@ async function handleApi(req, res, pathname) {
     return send(res, 200, { order: shopOrder(order) });
   }
 
-  // POST /api/orders/:id/seal — confirm the sealed bag
+  // POST /api/orders/:id/seal — superseded: Photo 2 (POST /api/orders/:id/pack-sealed) seals + marks READY
   if (method === 'POST' && /^\/api\/orders\/[^/]+\/seal$/.test(pathname)) {
-    const id = pathname.split('/')[3];
-    const order = findOrder(id);
-    if (!order) return sendError(res, 404, 'Order not found');
-    if (order.status !== 'PACKING') return sendError(res, 409, `Cannot seal from ${order.status}`);
-    if (!order.packPhotoStub) return sendError(res, 409, 'Capture pack photo stub first');
-    order.sealConfirmed = true;
-    order.sealChecklist = {
-      bagSealed: true,
-      tearStripIntact: true,
-      qrLast4: order.id.slice(-4).toUpperCase(),
-      copy: 'Press the bag closed so the peel-and-seal strip is fully sealed · tear strip intact. QR-in-V is already printed on the bag — not a sticker.',
-    };
-    order.updatedAt = new Date().toISOString();
-    saveOrder(order);
-    return send(res, 200, { order: shopOrder(order) });
+    return sendError(res, 410, 'Sealing is now Photo 2: POST /api/orders/:id/pack-sealed (sealed bag, QR-in-V + seal strip visible). It marks the order READY.');
   }
 
   // POST /api/orders/:id/ready — only after PAID→pack→pack-photo→seal
@@ -1269,18 +1258,8 @@ async function handleApi(req, res, pathname) {
     if (order.status !== 'PACKING') {
       return sendError(res, 409, `Cannot mark ready from ${order.status} — Start pack after PAID sale alert first`);
     }
-    if (!order.packPhotoStub) {
-      return sendError(res, 409, 'Pack photo with tote QR required before READY (sale identity)');
-    }
-    if (!order.sealConfirmed) {
-      return sendError(res, 409, 'Confirm the bag is sealed before READY');
-    }
-    if (process.env.REQUIRE_PACK_CHECKLIST !== '0' && !(order.packChecklist && order.packChecklist.done)) {
-      return sendError(res, 409, 'Finish the packing checklist + sealed-box photo before READY');
-    }
-    if (!order.toteQrPayload) {
-      return sendError(res, 409, 'Tote QR identity missing — reshoot pack photo or link bag QR');
-    }
+    if (!order.packBefore) return sendError(res, 409, 'Photo 1 (product on the bag QR) required first');
+    if (!order.packAfter) return sendError(res, 409, 'Photo 2 (sealed bag, QR-in-V + seal strip visible) required before READY — it marks the order READY and calls delivery');
     order.status = 'READY';
     order.updatedAt = new Date().toISOString();
     order.sealedAt = order.updatedAt;
@@ -1325,17 +1304,9 @@ async function handleApi(req, res, pathname) {
     if (!['PICKED_UP', 'READY'].includes(order.status)) {
       return sendError(res, 409, `Cannot accept from ${order.status}`);
     }
-    if (body.sealIntact === false) {
-      // Seal check answered "No" → route to a dispute instead of accepting
-      const d = X.sealDispute(order, body.note || 'Buyer reported the seal was not intact at handoff.', X.saveDataImage('boxes', 'dispute-' + order.id.slice(0, 8), body.confirmImage || body.photo), 'seal_not_intact');
-      order.updatedAt = new Date().toISOString();
-      saveOrder(order);
-      return send(res, 200, { disputed: true, dispute: { id: d.id, status: d.status }, order: publicOrder(order) });
-    }
-    if (order.disputeId && X.S().disputes.some((d) => d.id === order.disputeId && d.status === 'open')) {
-      return sendError(res, 409, 'A seal dispute is open for this order — VendiPort will review it before it can be accepted.');
-    }
-    if (body.sealIntact === true) order.sealCheck = { intact: true, at: new Date().toISOString() };
+    // Accept = the buyer inspected the sealed bag at the door and confirms it arrived sealed (sale final).
+    // Tampered bag => Refuse / Report (POST /refuse) instead.
+    order.acceptedSealed = true;
     if (order.status === 'READY') {
       order.status = 'PICKED_UP';
       order.pickedUpAt = new Date().toISOString();
@@ -1393,16 +1364,21 @@ async function handleApi(req, res, pathname) {
     if (!['PICKED_UP', 'READY'].includes(order.status)) {
       return sendError(res, 409, `Cannot refuse from ${order.status}`);
     }
+    const rbody = await readBody(req).catch(() => ({}));
     order.status = 'REFUSED_SEAL';
     order.updatedAt = new Date().toISOString();
     order.refusedAt = order.updatedAt;
     order.refundStub = {
       amount: order.total,
       fee: 0,
-      note: 'Full refund — seal/QR integrity fail. No 15% cancel fee. Return tote to shop.',
+      note: 'Full refund — bag looked tampered; buyer refused at the door. No 15% cancel fee. Return tote to shop.',
     };
+    // Refuse / Report opens the dispute record (optional note + photo) and refunds in full right away.
+    const rp = X.saveDataImage('boxes', 'dispute-' + order.id.slice(0, 8), rbody.photo || rbody.confirmImage);
+    const rd = X.sealDispute(order, rbody.note || 'Buyer refused the delivery: bag looked tampered.', rp, 'seal_not_intact', 'refused_at_door');
+    rd.refund = { amount: order.total, returnRequired: true, at: order.refusedAt, auto: true };
     saveOrder(order);
-    return send(res, 200, { order: publicOrder(order) });
+    return send(res, 200, { order: publicOrder(order), dispute: { id: rd.id, status: rd.status } });
   }
 
 
