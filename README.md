@@ -52,3 +52,23 @@ Runs **without any Stripe keys** (Pay stub). To enable **test-mode** Checkout la
 4. **Never commit secrets.** See **DEPLOY.md** + **DNS.md**.
 
 `GET /api/payments/config` → `{ mode: "stub" | "stripe_test" }`.
+
+
+## New features (beta round 2)
+
+**Buyer** — ZIP/area check with saved address; ★ **Radar** (follow a wanted card/box, alerts when a shop lists it; also on the member page); "On your radar" badges; order **status timeline** (Paid → Packing → Ready → Out → Arrived) with simulated masked-phone text log, delivery code, one-tap cancel with reason, rating; **seal check** at the door ("No" opens a dispute); **? key** = "How VendiPort works"; **My Collection** (`/collection`) and **box breaks**.
+
+**Box breaks** — paste a link from *any* social platform (YouTube, TikTok, Instagram, Vimeo, Twitch embed inline; Facebook, X, others show a "Watch on <platform>" card). Photos optional. Marketing-consent checkbox (default off), public/private toggle, public gallery `/breaks`, permalink `/breaks/<id>`, share link + branded SVG share card.
+
+**Shop** — Wanted feed (ranked by ZIP demand, "I have this"), Earnings tab, pause switch, packing checklist with sealed-box photo (required before READY), low-stock / sold-out flags and "Someone wants this" badges.
+
+**Admin / owner** — `/admin` (passcode): Dashboard, Demand, Sales & money, Fulfillment, Trust & safety, Stores, Product health, Disputes, Shop approval, Content queue. See `VendiPort-Owner-Diagnostics.md`.
+
+**Pages:** `/admin` `/collection` `/my-collection` `/my-breaks` `/radar` `/breaks` `/breaks/<id>`
+**API (under `/api`):** `area`, `buyer/:id`, `search`, `events`, `radar`, `wanted`, `wanted/have`, `shop/{status,pause,earnings,verify}`, `orders/:id/{buyer,notify,arrive-proof,pack-checklist,dispute,rate}`, `collection`, `breaks` (+`/public`, `/mine`, `/:id`, `/:id/card.svg`, `/:id/share`, `/:id/view`), `admin/*`.
+
+**Env vars:** `ADMIN_PASSCODE` (default `vendiport-admin-dev`), `SERVICE_ZIPS` (comma list overriding the demo Bay Area service ZIPs), `REQUIRE_PACK_CHECKLIST` (`0` to not require the checklist before READY).
+
+**Tests:** `npm test` (smoke tests on a temp data dir).
+**Demo data:** seeded into `extras.json` in `DATA_DIR` on first run (tagged `demo:true`; "Reset demo data" in `/admin`). Render's free disk resets, so it reseeds.
+**Stubs:** SMS (simulated), payments, photo storage (local disk).
