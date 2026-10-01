@@ -85,7 +85,12 @@ function render(order) {
       actions.innerHTML = `<div class="banner ok">Tote-bag QR matched · Accepted — sale final.${order.qrVerified ? ' ✓' : ''}</div>
         ${order.confirmImage ? `<div class="panel" style="margin-top:10px"><div class="panel-label">Your confirmation photo (sent to shop)</div>
         <img src="${escapeHtml(order.confirmImage)}" alt="Confirmation" style="width:100%;max-height:220px;object-fit:cover;border-radius:10px;margin-top:6px" />
-        <div class="mono" style="margin-top:6px">${escapeHtml(order.confirmedAt || '')}</div></div>` : ''}`;
+        <div class="mono" style="margin-top:6px">${escapeHtml(order.confirmedAt || '')}</div></div>` : ''}
+        <div class="panel" style="margin-top:10px"><div class="panel-label">After the rip</div>
+          <p class="vp-hint" style="margin:0 0 10px">Delivered and sealed ✓ — rate the order and add your box break to My Collection.</p>
+          <a class="vp-btn block" style="display:block;text-align:center;text-decoration:none" href="/track/${order.id}">⭐ Rate shop &amp; delivery</a>
+          <a class="vp-btn purple block" style="display:block;text-align:center;text-decoration:none;margin-top:8px" href="/collection?order=${order.id}">▶ Add my box break (any social link)</a>
+          <a class="vp-btn ghost block" style="display:block;text-align:center;text-decoration:none;margin-top:8px" href="/collection">▣ My Collection</a></div>`;
     } else if (order.status === 'REFUSED_SEAL') {
       actions.innerHTML = '<div class="banner warn">Refused (seal / tote-bag QR fail) — full refund stub. Return tote to shop.</div>';
     } else {
@@ -94,17 +99,37 @@ function render(order) {
     return;
   }
 
+  if (order.disputeOpen) {
+    actions.innerHTML = `<div class="banner warn">Seal dispute open — you reported the seal as not intact. VendiPort is reviewing the shop’s sealed-box photo and yours. You won’t be charged until it’s resolved.</div>
+      <div class="panel" style="margin-top:10px"><div class="panel-label">What happens next</div><p class="vp-hint" style="margin:0">1. We compare photos &amp; timestamps · 2. You get a refund or a replacement · 3. You’ll see the result in your order status. Keep the tote and don’t open it.</p>
+      <a class="vp-btn ghost block" style="display:block;text-align:center;text-decoration:none;margin-top:10px" href="/track/${order.id}">View order status</a></div>`;
+    return;
+  }
   if (!canDecide) {
     const msg = order.status === 'PICKED_UP' && !order.arrivePhotoStub
       ? 'Waiting for arrive photo stub to unlock tote-bag QR accept.'
       : `Handoff unlocks after pickup (+ arrive photo). Now: ${escapeHtml(order.status)}`;
     actions.innerHTML = `<div class="banner warn">${msg}</div>`;
     if (order.status === 'PICKED_UP' && !order.arrivePhotoStub) {
+      const dc = document.createElement('div');
+      dc.className = 'panel'; dc.style.marginTop = '10px';
+      dc.innerHTML = `<div class="panel-label">Handoff proof · delivery code</div>${order.deliveryCode ? `<div class="vp-code"><div class="cap">Your delivery code</div><div class="num">${escapeHtml(order.deliveryCode)}</div></div>` : ''}<p class="vp-hint" style="margin:0 0 8px">Courier: enter the buyer’s 4-digit code, or take photo proof of the tote at the door.</p><div class="vp-row"><input class="vp-input" id="ho-code" inputmode="numeric" maxlength="4" placeholder="Enter code" /><button type="button" class="vp-btn" id="ho-code-go">Verify</button></div><button type="button" class="vp-btn ghost block sm" id="ho-photo" style="margin-top:8px">📷 Photo proof instead</button><input type="file" id="ho-file" accept="image/*" capture="environment" class="hidden" />`;
+      actions.appendChild(dc);
+      dc.querySelector('#ho-code-go').addEventListener('click', async () => {
+        try { const r = await api(`/api/orders/${order.id}/arrive-proof`, { method: 'POST', body: JSON.stringify({ code: dc.querySelector('#ho-code').value.trim() }) }); toast('Delivery code verified'); render(r.order); } catch (e) { toast(e.message); }
+      });
+      dc.querySelector('#ho-photo').addEventListener('click', () => dc.querySelector('#ho-file').click());
+      dc.querySelector('#ho-file').addEventListener('change', async (ev) => {
+        const f = ev.target.files && ev.target.files[0]; if (!f) return;
+        const url = await fileToDataUrl(f);
+        try { const r = await api(`/api/orders/${order.id}/arrive-proof`, { method: 'POST', body: JSON.stringify({ photo: url }) }); toast('Photo proof saved'); render(r.order); } catch (e) { toast(e.message); }
+      });
       const stub = document.createElement('button');
       stub.type = 'button';
       stub.className = 'btn btn-teal btn-block';
       stub.style.marginTop = '10px';
       stub.textContent = 'Simulate arrive photo (stub)';
+      stub.classList.add('hidden');
       stub.addEventListener('click', () => doAction(order.id, 'arrive-photo'));
       actions.appendChild(stub);
     }
@@ -138,6 +163,7 @@ function render(order) {
     <div class="job-actions" style="margin-top:8px">
       <button type="button" class="btn btn-teal btn-sm" id="qr-start">Start camera scan</button>
       <button type="button" class="btn btn-ghost btn-sm" id="qr-stop">Stop</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="qr-tap">Tap to scan tote QR</button>
     </div>
     <div class="field" style="margin-top:12px">
       <label style="font-size:11px;color:var(--muted)">Or upload photo of tote-bag QR</label>
@@ -147,6 +173,7 @@ function render(order) {
   actions.appendChild(panel);
 
   qs('#qr-start').addEventListener('click', () => startCameraScan(order));
+  qs('#qr-tap').addEventListener('click', () => tapScanStub(order));
   qs('#qr-stop').addEventListener('click', () => {
     stopScanner();
     qs('#qr-status').textContent = 'Camera stopped';
@@ -325,17 +352,54 @@ async function acceptWithQr(order, payload, confirmImage) {
     toast(msg);
     return;
   }
+  if (status) status.textContent = 'QR captured — one quick check before you accept…';
+  askSealCheck(order, payload, confirmImage);
+}
+
+/** Seal check at handoff: "Was the seal intact?" must be answered before Accept. "No" routes to a dispute. */
+function askSealCheck(order, payload, confirmImage) {
+  const body = VPX.openSheet('Seal check', 'Look at the zip tie and VOID label before you accept', `
+    <div class="vp-seal-q">
+      <div style="font-size:42px">🛡️</div>
+      <div class="big">Was the seal intact?</div>
+      <p class="vp-hint" style="margin:0">Zip tie not cut · VOID label not peeled · tote not opened. Saying <b>No</b> opens a dispute — VendiPort reviews it with the shop’s sealed-box photo. You won’t be charged until it’s resolved.</p>
+      <div class="two"><button type="button" class="vp-btn" id="seal-yes">Yes — intact<br><small>Accept</small></button><button type="button" class="vp-btn red" id="seal-no">No — tampered<br><small>Report</small></button></div>
+      <div id="seal-note-wrap" class="hidden" style="text-align:left;margin-top:12px"><label class="vp-lbl">What did you see? (optional)</label><textarea class="vp-textarea" id="seal-note" placeholder="Zip tie cut, VOID label peeled…"></textarea><button type="button" class="vp-btn red block" id="seal-send" style="margin-top:8px">Open dispute</button></div>
+    </div>`);
+  body.querySelector('#seal-yes').addEventListener('click', () => submitAccept(order, payload, confirmImage, true));
+  body.querySelector('#seal-no').addEventListener('click', () => { body.querySelector('#seal-note-wrap').classList.remove('hidden'); });
+  body.querySelector('#seal-send').addEventListener('click', () => submitAccept(order, payload, confirmImage, false, body.querySelector('#seal-note').value));
+}
+
+async function submitAccept(order, payload, confirmImage, intact, note) {
+  const status = qs('#qr-status');
   try {
-    const { order: o } = await api(`/api/orders/${order.id}/accept`, {
+    const r = await api(`/api/orders/${order.id}/accept`, {
       method: 'POST',
-      body: JSON.stringify({ qrPayload: payload, confirmImage }),
+      body: JSON.stringify({ qrPayload: payload, confirmImage, sealIntact: intact, note: note || '' }),
     });
-    toast('Tote QR matched — confirmation sent to shop');
-    render(o);
+    VPX.closeSheet();
+    if (r.disputed) { toast('Dispute opened — VendiPort will review'); render(r.order); return; }
+    toast('Seal intact · tote QR matched — accepted');
+    render(r.order);
   } catch (err) {
+    VPX.closeSheet();
     if (status) status.textContent = err.message;
     toast(err.message);
   }
+}
+
+/** Tap-to-scan stub: uses the order's tote QR and draws a proof frame (for demos / no camera). */
+async function tapScanStub(order) {
+  const c = document.createElement('canvas');
+  c.width = 480; c.height = 320;
+  const x = c.getContext('2d');
+  x.fillStyle = '#0b1114'; x.fillRect(0, 0, 480, 320);
+  x.fillStyle = '#4fd1c5'; x.font = 'bold 22px sans-serif'; x.fillText('Tote QR proof (tap scan stub)', 24, 50);
+  x.fillStyle = '#fff'; x.font = '16px monospace'; x.fillText(String(order.toteQrPayload || '').slice(0, 44), 24, 90);
+  x.fillStyle = '#8b95a8'; x.fillText('Last-4 ' + order.last4 + ' · ' + new Date().toLocaleString(), 24, 120);
+  for (let i = 0; i < 9; i++) for (let j = 0; j < 9; j++) { if ((i * 7 + j * 13 + i * j) % 3) { x.fillStyle = '#fff'; x.fillRect(300 + i * 14, 150 + j * 14, 12, 12); } }
+  await acceptWithQr(order, order.toteQrPayload, c.toDataURL('image/jpeg', 0.8));
 }
 
 async function doAction(id, action) {

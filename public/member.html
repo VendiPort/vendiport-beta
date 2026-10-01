@@ -7,6 +7,7 @@
   <title>VendiPort — Account</title>
   <link rel="stylesheet" href="/css/app.css" />
   <link rel="stylesheet" href="/css/machine.css" />
+  <link rel="stylesheet" href="/css/extras.css" />
 </head>
 <body class="machine-body">
   <div class="app">
@@ -39,6 +40,11 @@
         Membership is bought here — <strong>before</strong> product checkout — not in the cart.
       </p>
       <div class="acct-menu">
+        <a class="acct-menu-row" href="/collection">
+          <span class="ico">▣</span>
+          <span class="copy"><strong>My Collection</strong><small>Purchases, hits &amp; box breaks</small></span>
+          <span class="chev">→</span>
+        </a>
         <a class="acct-menu-row" href="#login">
           <span class="ico">🔑</span>
           <span class="copy"><strong>Sign in</strong><small>Returning member</small></span>
@@ -125,7 +131,15 @@
       <p style="font-size:13px;color:var(--muted);line-height:1.45">
         $1.99/mo · first month free active · no guest fee on machine checkout · rewards stub
       </p>
-      <a class="pay-stub" href="/" style="display:block;text-align:center;text-decoration:none;margin-top:14px">
+      <a class="pay-stub" href="/collection" style="display:block;text-align:center;text-decoration:none;margin-top:14px;background:linear-gradient(180deg,#8a4fd1,#5b2d8a)">
+        ▣ My Collection
+        <span class="subline">Purchase history · box breaks · hits pulled</span>
+      </a>
+      <a class="pay-stub" href="/radar" style="display:block;text-align:center;text-decoration:none;margin-top:10px">
+        ★ My Radar
+        <span class="subline">Cards you’re watching · alerts</span>
+      </a>
+      <a class="pay-stub" href="/" style="display:block;text-align:center;text-decoration:none;margin-top:10px">
         Back to machine
         <span class="subline">Shop as Member · top-right shows your initial</span>
       </a>
@@ -133,6 +147,7 @@
     </section>
   </div>
   <script src="/js/api.js"></script>
+  <script src="/js/extras.js"></script>
   <script src="/js/session.js"></script>
   <script src="/js/member.js"></script>
 </body>

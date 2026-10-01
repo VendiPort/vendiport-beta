@@ -69,7 +69,7 @@ async function applyGalaxyComposites(root) {
   );
 }
 
-function renderBrowse() {
+function renderBrowse(quiet) {
   qs('#view-browse').classList.remove('hidden');
   qs('#view-checkout').classList.add('hidden');
   qs('#view-paid').classList.add('hidden');
@@ -85,16 +85,23 @@ function renderBrowse() {
 
   const list = qs('#product-list');
   list.innerHTML = '';
+  const pn = qs('#paused-note');
+  if (pn) pn.classList.toggle('hidden', !catalog.paused);
+  if (!catalog.products.length && !catalog.paused) list.innerHTML = '<div class="empty" style="grid-column:1/-1">Everything is sold out right now — add what you want to your ★ Radar and we’ll alert you.</div>';
+  if (!quiet) VPX.event('browse');
+  renderRadarStrip();
   for (const p of catalog.products) {
     const earliest = p.earliestWindow;
     const slot = document.createElement('article');
     slot.className = 'vslot';
+    const onRadar = (VPX.radar.onRadarProducts || {})[p.id];
     slot.innerHTML = `
       <div class="slot-showcase">
         <div class="glass-window">
           <span class="bracket tl"></span><span class="bracket tr"></span>
           <span class="bracket bl"></span><span class="bracket br"></span>
           <div class="glass-inner">${productVisual(p)}</div>
+          ${onRadar ? `<span class="vp-radar-badge" title="${escapeHtml(onRadar[0])}">${VPX.STAR_SVG(11)} On your radar</span>` : ''}
           <button type="button" class="chase-icon-btn" aria-label="Hits still available for ${escapeHtml(p.title)}">
             <svg class="chase-badge-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false" width="16" height="16">
               <circle cx="12" cy="12" r="10" fill="none" stroke="#4fd1c5" stroke-width="2"/>
@@ -108,7 +115,7 @@ function renderBrowse() {
       <div class="rail" aria-hidden="true"></div>
       <div class="slot-meta-bar">
         <span class="win">${escapeHtml(earliest ? earliest.label : '—')}</span>
-        <span class="units">${earliest ? earliest.units : 0} left</span>
+        <span class="units">${earliest ? earliest.units : 0} left${p.stock && p.stock.low ? ' · low' : ''}</span>
       </div>
       <div class="slot-title">${escapeHtml(p.title)}</div>
       <div class="slot-price">${money(p.price)}</div>
@@ -128,6 +135,26 @@ function renderBrowse() {
   }
   applyGalaxyComposites(list);
 }
+
+function renderRadarStrip() {
+  const el = qs('#radar-strip');
+  if (!el) return;
+  const live = (VPX.radar.items || []).filter((i) => i.available && i.available.length);
+  const unread = (VPX.radar.alerts || []).filter((a) => !a.read)[0];
+  if (!live.length && !unread) { el.classList.add('hidden'); return; }
+  const first = live[0];
+  el.innerHTML = `${VPX.STAR_SVG(20)}<span>${unread ? escapeHtml(unread.text) : `<b>On your radar:</b> ${escapeHtml(first.label)} — ${escapeHtml(first.available[0].title)} is available now.`}</span>`;
+  el.classList.remove('hidden');
+  el.onclick = () => VPX.openRadar();
+}
+let radarSig = null;
+document.addEventListener('vp-radar', () => {
+  const sig = JSON.stringify([(VPX.radar.items || []).map((i) => i.id), Object.keys(VPX.radar.onRadarProducts || {}), (VPX.radar.alerts || []).filter((a) => !a.read).length]);
+  if (radarSig === null) { radarSig = sig; return; }
+  if (sig === radarSig) return;
+  radarSig = sig;
+  if (catalog.products.length && qs('#view-browse') && !qs('#view-browse').classList.contains('hidden')) renderBrowse(true);
+});
 
 function openChaseOverlay(product) {
   const overlay = qs('#chase-overlay');
@@ -161,16 +188,25 @@ function openChaseOverlay(product) {
       const valHtml = Number.isFinite(val)
         ? `<div class="potential-value"><span class="pv-label">Potential value</span><span class="pv-amt">${money(val)}</span></div>`
         : '';
+      const on = VPX.radar.keys.has(VPX.keyOf(c.name));
       li.innerHTML = `
         <div class="chase-overlay-rank">${i + 1}</div>
         <div class="chase-overlay-body">
           <div class="nm-row">
-            <div class="nm">${escapeHtml(c.name)}</div>
+            <div class="nm">${escapeHtml(c.name)}${c.pulled ? `<span class="pulled-tag">· ${c.pulled} pulled</span>` : ''}</div>
             ${valHtml}
           </div>
-          <div class="rarity">${c.rarity ? escapeHtml(c.rarity) + ' · ' : ''}potentially still available</div>
+          <div class="rarity">${c.rarity ? escapeHtml(c.rarity) + ' · ' : ''}${c.pulled ? 'some pulled — others' : ''} potentially still available</div>
           <div class="note">${escapeHtml(c.note || '')}</div>
-        </div>`;
+        </div>
+        <button type="button" class="radar-star${on ? ' on' : ''}" aria-label="${on ? 'Remove from' : 'Add to'} Radar" title="${on ? 'On your Radar' : 'Add to Radar'}">${on ? '★' : '☆'}</button>`;
+      li.querySelector('.radar-star').addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const btn = e.currentTarget;
+        const added = await VPX.toggleRadar(c.name, 'card', { source: 'chase', productId: null });
+        btn.classList.toggle('on', !!added); btn.textContent = added ? '★' : '☆';
+        renderBrowse();
+      });
       list.appendChild(li);
     });
   }
@@ -234,6 +270,7 @@ async function openCheckout(productId) {
     }
   }
   selected = { product, windowId };
+  VPX.event('select');
   renderCheckout();
 }
 
@@ -252,7 +289,16 @@ function renderCheckout() {
   qs('#view-paid').classList.add('hidden');
   renderAccountChip();
   paintBuyerStream('checkout', 'checkout');
+  VPX.event('checkout');
   loadPayConfig().catch(() => {});
+  const warn = qs('#co-area-warn');
+  const az = VPX.areaMsg;
+  if (warn) {
+    warn.classList.toggle('hidden', !(az && az.valid && !az.inArea));
+    if (az && !az.inArea) warn.textContent = az.message;
+  }
+  const payB = qs('#pay-btn');
+  if (payB) payB.disabled = !!(az && az.valid && !az.inArea);
 
   const p = selected.product;
   const t = calcTotals();
@@ -323,6 +369,7 @@ async function payStub() {
           productId: selected.product.id,
           windowId: selected.windowId,
           membershipOptIn: membershipOn(),
+          buyerId: VPX.buyerId(),
         }),
       });
       if (!url) throw new Error('No Stripe Checkout URL');
@@ -331,12 +378,19 @@ async function payStub() {
       location.href = url;
       return;
     }
+    const notifyOn = qs('#co-notify') && qs('#co-notify').checked;
+    const phone = notifyOn ? qs('#co-phone').value.trim() : '';
+    if (notifyOn && phone.replace(/\D/g, '').length < 10) { btn.disabled = false; return toast('Enter a valid mobile number for text updates'); }
     const { order } = await api('/api/orders', {
       method: 'POST',
       body: JSON.stringify({
         productId: selected.product.id,
         windowId: selected.windowId,
         membershipOptIn: membershipOn(),
+        buyerId: VPX.buyerId(),
+        zip: VPX.zip() || undefined,
+        notifyText: notifyOn,
+        notifyPhone: phone,
         pay: true,
       }),
     });
@@ -414,6 +468,7 @@ function renderPaid(order) {
     pulse.textContent = `Status: ${order.status}`;
   }
 
+  VPX.renderTimeline(qs('#paid-status-panel'), order);
   const link = qs('#paid-handoff');
   link.href = order.handoffUrl;
   link.textContent = location.origin + order.handoffUrl;
@@ -453,6 +508,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
   renderAccountChip();
+  VPX.renderArea(qs('#area-panel'));
+  document.addEventListener('vp-area', () => { if (!qs('#view-checkout').classList.contains('hidden')) renderCheckout(); });
+  const nt = qs('#co-notify');
+  if (nt) nt.addEventListener('change', () => qs('#co-notify-phone').classList.toggle('hidden', !nt.checked));
   loadPayConfig().catch(() => {});
-  loadBrowse().catch((e) => toast(e.message));
+  VPX.loadRadar().then(() => loadBrowse()).catch((e) => toast(e.message));
 });

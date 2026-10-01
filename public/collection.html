@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#07090d" />
+  <title>VendiPort — My Collection</title>
+  <link rel="icon" type="image/png" href="/favicon.png" />
+  <link rel="stylesheet" href="/css/app.css" />
+  <link rel="stylesheet" href="/css/machine.css" />
+  <link rel="stylesheet" href="/css/extras.css" />
+</head>
+<body class="machine-body">
+  <div class="app">
+    <div class="bay-glass">
+      <img class="bay-glass-frame" src="/img/bay-glass-frame.png?v=36clear" alt="" aria-hidden="true" />
+      <header class="marquee marquee-account">
+        <div class="brand-row brand-row-spread">
+          <div class="brand-left"><a href="/"><img class="brand-lockup-img" src="/img/logo-header.png" alt="VendiPort" height="56" /></a></div>
+          <div id="account-chip" class="account-chip"></div>
+        </div>
+        <div class="tag" id="page-tag">MY COLLECTION</div>
+        <div class="leds" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+      </header>
+    </div>
+    <p class="sub"><a class="back" href="/">← Machine</a></p>
+
+    <div class="vp-tabs" role="tablist">
+      <button type="button" class="on" data-t="coll">Collection</button>
+      <button type="button" data-t="breaks">My Breaks</button>
+      <button type="button" data-t="radar">★ Radar</button>
+    </div>
+
+    <section id="t-coll">
+      <div class="vp-totals" id="totals"></div>
+      <div class="panel-label" style="margin:8px 2px">Purchase history</div>
+      <div id="items"><div class="empty">Loading…</div></div>
+    </section>
+    <section id="t-breaks" class="hidden"><div id="my-breaks"></div>
+      <a class="vp-btn ghost block" style="display:block;text-align:center;text-decoration:none;margin-top:12px" href="/breaks">Browse the public Breaks feed →</a></section>
+    <section id="t-radar" class="hidden"><div class="panel" id="radar-host"></div></section>
+
+    <p class="footer-note">Your record syncs automatically when an order is delivered · shop names are never shown.</p>
+  </div>
+  <script src="/js/api.js"></script>
+  <script src="/js/extras.js"></script>
+  <script src="/js/session.js"></script>
+  <script src="/js/collection.js"></script>
+</body>
+</html>

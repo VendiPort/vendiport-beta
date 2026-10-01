@@ -1,12 +1,5 @@
 /* Track order — /track/<id> or /order/<id> — survives refresh */
-const TRACK_STREAM = [
-  { key: 'paid', label: 'Paid' },
-  { key: 'pack', label: 'Packing' },
-  { key: 'ready', label: 'Ready' },
-  { key: 'out', label: 'Out' },
-  { key: 'arrive', label: 'Arrive' },
-  { key: 'accept', label: 'Scan tote QR' },
-];
+// TRACK_STREAM comes from session.js (was duplicated here, which broke this page)
 
 let trackCatalog = null;
 let currentTrackOrder = null;
@@ -76,6 +69,81 @@ function linesHtml(order) {
       ${order.guestFee ? `<div class="line"><span class="muted">Guest fee</span><span>${money(order.guestFee)}</span></div>` : ''}
       <div class="line total"><span>Total</span><span>${money(order.total)}</span></div>
     </div>`;
+}
+
+function codePanelHtml(order) {
+  if (order.status !== 'PICKED_UP' || !order.deliveryCode) return '';
+  return `<div class="panel"><div class="panel-label">Delivery code</div>
+    <div class="vp-code"><div class="cap">Read this to the courier</div><div class="num">${escapeHtml(order.deliveryCode)}</div></div>
+    <p class="vp-hint" style="margin:0">The courier enters this code (or snaps photo proof) at the door. Then you do the seal check on the <a href="${escapeHtml(order.handoffUrl || '#')}">handoff page</a>.</p>
+    ${order.proofType ? `<p class="vp-hint" style="color:#7fe6dc">✓ Handoff proof recorded (${order.proofType === 'code' ? 'delivery code' : 'photo'}).</p>` : `<div class="vp-row" style="margin-top:10px"><input class="vp-input" id="proof-code" inputmode="numeric" maxlength="4" placeholder="Courier: enter code" /><button type="button" class="vp-btn" id="proof-go">Verify</button></div>
+    <button type="button" class="vp-btn ghost block sm" id="proof-photo" style="margin-top:8px">📷 Photo proof instead (stub)</button><input type="file" id="proof-file" accept="image/*" capture="environment" class="hidden" />`}
+  </div>`;
+}
+
+function ratingHtml(order) {
+  if (order.status !== 'DELIVERED_ACCEPTED') return '';
+  if (order.rated) return `<div class="panel"><div class="panel-label">Your rating</div><p style="font-size:13px;margin:0">Shop ${'★'.repeat(order.rating.shop)} · Delivery ${'★'.repeat(order.rating.delivery)} — thanks!</p>
+    <a class="vp-btn block" style="display:block;text-align:center;text-decoration:none;margin-top:10px" href="/collection">▣ Add your box break → My Collection</a></div>`;
+  return `<div class="panel" id="rate-panel"><div class="panel-label">Rate your order</div>
+    <div class="vp-row" style="justify-content:space-between"><span style="font-size:13px">The shop (packing &amp; seal)</span><span class="vp-stars" data-k="shop"></span></div>
+    <div class="vp-row" style="justify-content:space-between;margin-top:6px"><span style="font-size:13px">The delivery</span><span class="vp-stars" data-k="delivery"></span></div>
+    <input class="vp-input" id="rate-comment" placeholder="Anything to add? (optional)" maxlength="200" style="margin-top:10px" />
+    <button type="button" class="vp-btn block" id="rate-go" style="margin-top:10px">Send rating</button>
+    <a class="vp-btn ghost block" style="display:block;text-align:center;text-decoration:none;margin-top:8px" href="/collection">▣ Log your box break → My Collection</a></div>`;
+}
+
+function wireRating(order) {
+  const pr = qs('#proof-go');
+  if (pr) {
+    pr.addEventListener('click', async () => {
+      try { const r = await api(`/api/orders/${order.id}/arrive-proof`, { method: 'POST', body: JSON.stringify({ code: qs('#proof-code').value.trim() }) }); toast('Delivery code verified'); renderTrack(r.order); } catch (e) { toast(e.message); }
+    });
+    const pb = qs('#proof-photo'), pf = qs('#proof-file');
+    pb.addEventListener('click', () => pf.click());
+    pf.addEventListener('change', async () => {
+      const f = pf.files && pf.files[0]; if (!f) return;
+      const url = await new Promise((res) => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(f); });
+      try { const r = await api(`/api/orders/${order.id}/arrive-proof`, { method: 'POST', body: JSON.stringify({ photo: url }) }); toast('Photo proof saved (stub)'); renderTrack(r.order); } catch (e) { toast(e.message); }
+    });
+  }
+  const panel = qs('#rate-panel');
+  if (!panel) return;
+  const val = { shop: 0, delivery: 0 };
+  panel.querySelectorAll('.vp-stars').forEach((el) => {
+    const k = el.dataset.k;
+    const paint = () => { el.innerHTML = [1, 2, 3, 4, 5].map((n) => `<button type="button" class="${n <= val[k] ? 'on' : ''}" data-n="${n}" aria-label="${n} star">★</button>`).join(''); el.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => { val[k] = +b.dataset.n; paint(); })); };
+    paint();
+  });
+  qs('#rate-go').addEventListener('click', async () => {
+    if (!val.shop || !val.delivery) return toast('Tap stars for both the shop and the delivery');
+    try { const r = await api(`/api/orders/${order.id}/rate`, { method: 'POST', body: JSON.stringify({ shop: val.shop, delivery: val.delivery, comment: qs('#rate-comment').value }) }); toast('Thanks for rating!'); renderTrack(r.order); } catch (e) { toast(e.message); }
+  });
+}
+
+const CANCEL_REASONS = ['Changed my mind', 'Ordered the wrong box', 'Found it elsewhere', 'Delivery time too late', 'Other'];
+function openCancelSheet(order, fee) {
+  const body = VPX.openSheet('Cancel order', 'One tap · refund on its way', `
+    <p class="vp-hint" style="margin:0 0 8px">Why are you cancelling? (helps us improve)</p>
+    ${CANCEL_REASONS.map((r, i) => `<label class="vp-check"><input type="radio" name="cr" value="${escapeHtml(r)}" ${i === 0 ? 'checked' : ''}/> <span>${escapeHtml(r)}</span></label>`).join('')}
+    <div class="panel" style="margin:12px 0 0"><div class="line"><span class="muted">Cancel fee (15% of product)</span><span>${money(fee)}</span></div><div class="line"><span class="muted">Delivery fee</span><span>Refunded</span></div></div>
+    <button type="button" class="vp-btn red block" id="cx-go" style="margin-top:12px;min-height:50px;font-size:15px">Cancel &amp; refund</button>
+    <button type="button" class="vp-btn ghost block" id="cx-no" style="margin-top:8px">Keep my order</button>`);
+  body.querySelector('#cx-no').addEventListener('click', VPX.closeSheet);
+  body.querySelector('#cx-go').addEventListener('click', async () => {
+    const reason = (body.querySelector('input[name=cr]:checked') || {}).value || 'Other';
+    try { const { order: o } = await api(`/api/orders/${order.id}/cancel`, { method: 'POST', body: JSON.stringify({ reason }) }); VPX.closeSheet(); toast(`Cancelled · refund started · fee ${money(o.cancelFee || 0)}`); renderTrack(o); } catch (e) { toast(e.message); }
+  });
+}
+function wireCancelQuick(order) {
+  // One-tap cancel button lives at top of the order card for any cancelable order
+  if (!order.cancelAllowed) return;
+  const hero = qs('.co-hero-copy');
+  if (!hero || qs('#quick-cancel')) return;
+  const b = document.createElement('button');
+  b.type = 'button'; b.id = 'quick-cancel'; b.className = 'vp-btn red sm'; b.style.marginTop = '10px'; b.textContent = 'Cancel & refund';
+  b.addEventListener('click', () => openCancelSheet(order, order.cancelFeeEstimate != null ? order.cancelFeeEstimate : +(Number(order.productPrice || 0) * 0.15).toFixed(2)));
+  hero.appendChild(b);
 }
 
 function pendingHtml(order) {
@@ -211,6 +279,9 @@ function renderTrack(order) {
         </div>
       </div>
 
+      <div class="panel" id="tl-panel"></div>
+      ${codePanelHtml(order)}
+      ${ratingHtml(order)}
       ${linesHtml(order)}
       ${pendingHtml(order)}
       ${changeOrderHtml(order)}
@@ -234,6 +305,9 @@ function renderTrack(order) {
     </div>
   `;
 
+  VPX.renderTimeline(qs('#tl-panel'), order);
+  wireRating(order);
+  wireCancelQuick(order);
   const changeBtn = qs('#track-change-order');
   const changeMenu = qs('#change-order-menu');
   if (changeBtn && changeMenu) {
@@ -245,21 +319,7 @@ function renderTrack(order) {
 
   const fee = order.cancelFeeEstimate != null ? order.cancelFeeEstimate : +(Number(order.productPrice || 0) * 0.15).toFixed(2);
   const cancel = qs('#track-cancel');
-  if (cancel) {
-    cancel.addEventListener('click', async () => {
-      const ok = confirm(
-        `Cancel this order?\n\nCancel fee: 15% of product (${money(fee)}).\nDelivery fee refunded if not yet picked up.`
-      );
-      if (!ok) return;
-      try {
-        const { order: o } = await api(`/api/orders/${order.id}/cancel`, { method: 'POST', body: '{}' });
-        toast(`Cancelled. Fee ${money(o.cancelFee || 0)}`);
-        renderTrack(o);
-      } catch (err) {
-        toast(err.message);
-      }
-    });
-  }
+  if (cancel) cancel.addEventListener('click', () => openCancelSheet(order, fee));
 
   const toggle = qs('#track-toggle-picker');
   if (toggle) toggle.addEventListener('click', () => showPicker(order));

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#07090d" />
+  <title>VendiPort — Breaks</title>
+  <link rel="icon" type="image/png" href="/favicon.png" />
+  <link rel="stylesheet" href="/css/app.css" />
+  <link rel="stylesheet" href="/css/machine.css" />
+  <link rel="stylesheet" href="/css/extras.css" />
+</head>
+<body class="machine-body">
+  <div class="app">
+    <div class="bay-glass">
+      <img class="bay-glass-frame" src="/img/bay-glass-frame.png?v=36clear" alt="" aria-hidden="true" />
+      <header class="marquee marquee-account">
+        <div class="brand-row brand-row-spread">
+          <div class="brand-left"><a href="/"><img class="brand-lockup-img" src="/img/logo-header.png" alt="VendiPort" height="56" /></a></div>
+          <div id="account-chip" class="account-chip"></div>
+        </div>
+        <div class="tag">BREAKS</div>
+        <div class="leds" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+      </header>
+    </div>
+    <p class="sub"><a class="back" href="/">← Machine</a> · <a href="/collection">My Collection</a></p>
+    <h1 class="sm" style="margin:4px 0 4px">Box breaks</h1>
+    <p class="sub" style="margin-top:0" id="b-sub">Real rips from VendiPort buyers — with the hits they pulled.</p>
+    <div id="feed"><div class="empty">Loading…</div></div>
+    <p class="footer-note">Videos stay on the buyer’s own platform — we only link and embed them. <span id="demo-note"></span></p>
+  </div>
+  <script src="/js/api.js"></script>
+  <script src="/js/extras.js"></script>
+  <script src="/js/session.js"></script>
+  <script src="/js/breaks.js"></script>
+</body>
+</html>
