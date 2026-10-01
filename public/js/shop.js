@@ -406,18 +406,12 @@ function jobCard(o) {
     ${o.status === 'PAID' && !o.amended ? '<div class="banner paid" style="margin-top:10px">NEW SALE — pull it. Start pack → pack photo with tote QR.</div>' : ''}
     ${o.status === 'PAID' && o.amended ? '<div class="banner paid" style="margin-top:8px">NEW SALE — pull all line items → pack photo with tote QR.</div>' : ''}
     <div class="panel" style="margin-top:10px">
-      <div class="panel-label">Pack · tote bag (QR already on bag)</div>
-      <p style="font-size:12px;color:var(--muted);margin:0;line-height:1.45">
-        <strong>Put product in tote → photo with tote bag QR visible in frame.</strong>
-        That QR in the pack photo becomes this order’s identity. Last-4 <strong>${o.last4}</strong>.
+      <div class="panel-label">Pack · two photos tied to the bag QR</div>
+      <p style="font-size:12px;color:var(--muted);margin:0 0 6px;line-height:1.45">
+        <strong>Photo 1 — before sealing:</strong> product placed on/over the bag’s QR, QR visible. This is the original scan: it starts packing and links the bag QR to this order (last-4 <strong>${o.last4}</strong>).<br>
+        <strong>Photo 2 — after sealing:</strong> press the Mylar bag shut; the sealed bag with the <strong>QR-in-V and peel-and-seal strip visible</strong>. This marks the order <strong>READY</strong> and automatically calls delivery (own-driver shops are notified instead).
       </p>
-    </div>
-    <div class="panel" style="margin-top:8px">
-      <div class="panel-label">Seal (physical — separate from QR)</div>
-      <p style="font-size:11px;color:var(--muted);margin:0;line-height:1.4">
-        Press the Mylar bag shut so the peel-and-seal strip is fully sealed · tear strip intact ·
-        “Only accept if untampered.” QR stays the pre-printed code on the bag.
-      </p>
+      <p class="terms-note" style="margin:6px 0 0">${VPX.ACCEPT_RULE_SHOP}</p>
     </div>
     <div class="checklist"></div>
     <div class="job-actions"></div>
@@ -497,28 +491,27 @@ function jobCard(o) {
   const actions = el.querySelector('.job-actions');
   // Locked stream: PAID alert → Start pack ONLY (no pack/ready until PACKING)
   if (o.status === 'PAID') {
-    actions.appendChild(btn('Start pack — pull it', 'btn-red', () => act(o.id, 'start-pack')));
+    actions.appendChild(btn('📷 Photo 1 — product on the bag QR (starts packing)', 'btn-red', () => capturePackPhoto(o)));
+    actions.appendChild(btn('Demo stub (no camera)', 'btn-ghost', () => act(o.id, 'pack-photo')));
   }
   if (o.status === 'PACKING') {
-    if (!o.packPhotoStub) {
-      actions.appendChild(btn('📷 Pack photo — product + tote QR in frame', 'btn-red', () => capturePackPhoto(o)));
-      actions.appendChild(btn('Demo stub (no camera)', 'btn-ghost', () => act(o.id, 'pack-photo')));
-    } else if (!o.toteQrFromPackPhoto && !o.toteQrLinkedAt) {
-      actions.appendChild(btn('Reshoot pack photo (need QR in frame)', 'btn-red', () => capturePackPhoto(o)));
-    } else {
-      actions.appendChild(btn('Reshoot pack photo', 'btn-ghost', () => capturePackPhoto(o)));
-    }
-    if (o.packPhotoStub && !o.sealConfirmed) {
-      actions.appendChild(btn('Confirm bag sealed', 'btn-teal', () => act(o.id, 'seal')));
-    }
-    if (o.sealConfirmed) {
-      const done = o.packChecklist && o.packChecklist.done;
-      const rb = btn(done ? 'Mark READY' : 'Mark READY (finish checklist first)', 'btn-teal', () => act(o.id, 'ready'));
-      if (!done) rb.disabled = true;
-      actions.appendChild(rb);
-    }
+    const done = o.packChecklist && o.packChecklist.done;
+    const ck = o.packChecklist && o.packChecklist.checks || {};
+    const allChecked = (o.checklistItems || []).every((i) => ck[i.id]);
+    const st = document.createElement('div');
+    st.className = 'mono';
+    st.innerHTML = `Photo 1 ${o.packBeforeDone || o.packPhotoStub ? '✓' : '—'} · Photo 2 ${o.packAfterDone ? '✓' : 'next'}`;
+    actions.appendChild(st);
+    actions.appendChild(btn('Reshoot Photo 1', 'btn-ghost', () => capturePackPhoto(o)));
+    actions.appendChild(btn('📷 Photo 2 — sealed bag, QR-in-V + strip visible → READY + call delivery', allChecked ? 'btn-teal' : 'btn-ghost', () => captureSealedPhoto(o)));
+    actions.appendChild(btn('Demo stub (no camera)', 'btn-ghost', () => act(o.id, 'pack-sealed', { stub: true, checks: Object.fromEntries((o.checklistItems || []).map((i) => [i.id, true])) })));
   }
   if (o.status === 'READY') {
+    const dsp = o.dispatch;
+    const n = document.createElement('div');
+    n.className = 'banner ok'; n.style.margin = '6px 0';
+    n.textContent = dsp ? (dsp.mode === 'own' ? 'Ready — your own driver delivers it (no courier requested).' : 'Courier requested automatically (simulated) — pickup ETA ~15 min.') : 'Ready for pickup.';
+    actions.appendChild(n);
     actions.appendChild(btn('Pickup scan (cancel closes)', 'btn-ghost', () => act(o.id, 'pickup')));
   }
   if (o.status === 'PICKED_UP') {
@@ -556,25 +549,39 @@ function jobCard(o) {
 function packChecklistEl(o) {
   const items = o.checklistItems || [];
   const cur = (o.packChecklist && o.packChecklist.checks) || {};
-  const photo = o.packChecklist && o.packChecklist.boxPhoto;
   const d = document.createElement('div');
   d.className = 'pack-check';
-  d.innerHTML = `<div class="panel-label" style="margin-bottom:6px">Packing checklist · sealed-box photo</div>
+  d.innerHTML = `<div class="panel-label" style="margin-bottom:6px">Packing checklist · tick all, then take Photo 2</div>
     ${items.map((i) => `<label class="vp-check"><input type="checkbox" data-c="${i.id}" ${cur[i.id] ? 'checked' : ''}/> <span>${escapeHtml(i.label)}</span></label>`).join('')}
-    ${photo && photo !== 'stub' ? `<img class="box-photo-thumb" src="${escapeHtml(photo)}" alt="Sealed box photo" />` : ''}
-    <div class="vp-row" style="margin-top:8px"><button type="button" class="vp-btn ghost sm" data-a="photo">📷 ${photo ? 'Retake' : 'Add'} sealed-box photo</button>
-    <button type="button" class="vp-btn sm" data-a="save">Save checklist</button></div>
-    <input type="file" accept="image/*" capture="environment" class="hidden" data-f="1" />
-    <p class="vp-hint" style="margin:6px 0 0">${o.packChecklist && o.packChecklist.done ? '<b style="color:#7fe6dc">✓ Checklist complete + box photo — you can mark READY.</b>' : 'Tick everything and add a sealed-box photo before READY. (Photo storage is a stub in beta.)'}</p>`;
-  const file = d.querySelector('[data-f]');
+    <div class="vp-row" style="margin-top:8px"><button type="button" class="vp-btn sm" data-a="save">Save checklist</button></div>
+    <p class="vp-hint" style="margin:6px 0 0">${o.packAfterDone ? '<b style="color:#7fe6dc">✓ Both photos on record.</b>' : `Photo 1 ${o.packBeforeDone || o.packPhotoStub ? '✓ done' : 'first'} · Photo 2 (sealed bag) needs every box ticked. (Photo storage is a stub in beta.)`}</p>`;
   const checks = () => Object.fromEntries(items.map((i) => [i.id, d.querySelector(`[data-c="${i.id}"]`).checked]));
-  const post = async (extra) => {
-    try { await api(`/api/orders/${o.id}/pack-checklist`, { method: 'POST', body: JSON.stringify(Object.assign({ checks: checks() }, extra || {})) }); await refreshJobs(); toast('Checklist saved'); } catch (e) { toast(e.message); }
-  };
-  d.querySelector('[data-a="save"]').addEventListener('click', () => post());
-  d.querySelector('[data-a="photo"]').addEventListener('click', () => file.click());
-  file.addEventListener('change', async () => { const f = file.files && file.files[0]; if (!f) return; const url = await fileToDataUrlShop(f); post({ boxPhoto: url }); });
+  d.querySelector('[data-a="save"]').addEventListener('click', async () => {
+    try { await api(`/api/orders/${o.id}/pack-checklist`, { method: 'POST', body: JSON.stringify({ checks: checks() }) }); await refreshJobs(); toast('Checklist saved'); } catch (e) { toast(e.message); }
+  });
+  d.checks = checks;
   return d;
+}
+
+/** Photo 2: sealed bag (QR-in-V + seal strip visible). Marks READY and triggers the delivery call. */
+async function captureSealedPhoto(order) {
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = 'image/*'; input.capture = 'environment';
+  input.onchange = async () => {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    try {
+      const photo = await fileToDataUrlShop(file);
+      const card = document.querySelector(`[data-oid="${order.id}"]`) || document;
+      const boxes = card.querySelectorAll('.pack-check [data-c]');
+      const checks = {};
+      boxes.forEach((b) => { checks[b.dataset.c] = b.checked; });
+      const r = await api(`/api/orders/${order.id}/pack-sealed`, { method: 'POST', body: JSON.stringify({ photo, checks, qr: order.toteQrPayload }) });
+      toast(r.dispatch && r.dispatch.mode === 'courier' ? 'READY — courier requested automatically (simulated)' : 'READY — your own driver delivers (no courier requested)');
+      await refreshJobs();
+    } catch (err) { toast(err.message || 'Photo 2 failed'); }
+  };
+  input.click();
 }
 
 function btn(label, cls, onClick) {
@@ -684,9 +691,9 @@ async function detectQrFromImageFile(file) {
   }
 }
 
-async function act(id, action) {
+async function act(id, action, body) {
   try {
-    await api(`/api/orders/${id}/${action}`, { method: 'POST', body: '{}' });
+    await api(`/api/orders/${id}/${action}`, { method: 'POST', body: JSON.stringify(body || {}) });
     toast(`${action} ✓`);
     await refreshJobs();
   } catch (err) {
@@ -1069,6 +1076,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ---------------- Pause switch (11) ----------------
 async function wirePause() {
+  const tt = qs('#shop-terms-text'); if (tt && window.VPX) tt.innerHTML = '<b>Two photos per order:</b> Photo 1 — product on the bag’s QR before sealing; Photo 2 — the sealed bag with QR-in-V and seal strip visible. Photo 2 marks the order READY and automatically calls delivery. ' + VPX.ACCEPT_RULE_SHOP;
   const sw = qs('#pause-switch');
   if (!sw) return;
   const paint = (st) => {
@@ -1171,6 +1179,10 @@ async function loadEarnings() {
       <div class="card"><div class="step-label">Coming up</div>
         <div class="line"><span class="muted">In progress (${e.pendingCount} order${e.pendingCount === 1 ? '' : 's'})</span><span>${money(e.pending)}</span></div>
         <p class="mono" style="margin-top:6px">${escapeHtml(e.payoutNote)}</p></div>
+      ${(e.shopNotices || []).length ? `<div class="card"><div class="step-label">Delivery notices</div>${e.shopNotices.map((n) => `<div class="line"><span class="muted">${escapeHtml(n.text)}</span></div>`).join('')}</div>` : ''}
+      <div class="card ${e.adjustments && e.adjustments.length ? 'warn' : ''}"><div class="step-label">Payout adjustments</div>
+        ${e.adjustments && e.adjustments.length ? e.adjustments.map((a) => `<div class="line"><span class="muted">#${escapeHtml(a.last4 || '')} · ${escapeHtml(a.reason)}</span><span>${money(a.amount)}</span></div>`).join('') + `<div class="line total"><span>Total adjustments</span><span>${money(e.adjustmentsTotal)}</span></div>` : '<div class="mono">None.</div>'}
+        <p class="mono" style="margin-top:6px">When VendiPort reviews a seal claim and finds shop fault, the order amount can be charged to the shop’s payout. It shows here.</p></div>
       <div class="card"><div class="step-label">Last 7 days</div>
         ${e.days.length ? e.days.map((d) => `<div class="line"><span class="muted">${escapeHtml(d.day)} · ${d.delivered} delivered</span><span>${money(d.net)}</span></div>`).join('') : '<div class="mono">No deliveries yet.</div>'}
         <div class="line total"><span>All-time net</span><span>${money(e.totalNet)}</span></div></div>`;
