@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a0c10" />
+  <meta name="robots" content="noindex" />
+  <title>VendiPort — Admin</title>
+  <link rel="icon" type="image/png" href="/favicon.png" />
+  <link rel="stylesheet" href="/css/app.css" />
+  <link rel="stylesheet" href="/css/machine.css" />
+  <link rel="stylesheet" href="/css/extras.css" />
+  <style>
+    .adm-wrap { max-width: 980px; }
+    .adm-tabs { display:flex; gap:4px; flex-wrap:wrap; margin:10px 0 14px; }
+    .adm-tabs button { flex:1 1 auto; border:1px solid #2a3344; background:#12161e; color:#cfd6e2; padding:9px 8px; border-radius:10px; font-weight:800; font-size:11px; letter-spacing:.03em; cursor:pointer; position:relative; }
+    .adm-tabs button.on { background:linear-gradient(180deg,#8a4fd1,#5b2d8a); border-color:#8a4fd1; color:#fff; }
+    .adm-tabs .n { display:inline-block; min-width:16px; padding:0 4px; margin-left:4px; border-radius:8px; background:#ff5a5f; color:#fff; font-size:10px; }
+    .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:8px; margin-bottom:12px; }
+    .kpi { padding:12px; border-radius:12px; background:rgba(4,8,10,.92); border:1px solid rgba(79,209,197,.28); box-shadow:0 0 14px rgba(91,45,138,.2); }
+    .kpi .n { font-size:26px; font-weight:900; color:#4fd1c5; line-height:1; text-shadow:0 0 10px rgba(79,209,197,.4); }
+    .kpi .n.warn { color:#ff8a8a; text-shadow:0 0 10px rgba(255,90,95,.4); }
+    .kpi .n.gold { color:#ffd84a; text-shadow:0 0 10px rgba(255,216,74,.4); }
+    .kpi .l { font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:#8b95a8; margin-top:5px; }
+    .sec { margin-bottom:16px; }
+    .sec h2 { font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:#4fd1c5; margin:0 0 8px; }
+    .grid2 { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:10px; }
+    table.t { width:100%; border-collapse:collapse; font-size:12px; }
+    table.t th { text-align:left; font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:#8b95a8; padding:5px 6px; border-bottom:1px solid #2a3344; }
+    table.t td { padding:7px 6px; border-bottom:1px solid rgba(42,51,68,.6); color:#dfe6ee; vertical-align:top; }
+    table.t td.r, table.t th.r { text-align:right; }
+    .tag { display:inline-block; font-size:9px; font-weight:800; letter-spacing:.08em; padding:2px 6px; border-radius:5px; text-transform:uppercase; }
+    .tag.demo { background:rgba(255,216,74,.12); color:#ffd84a; border:1px solid rgba(255,216,74,.4); }
+    .tag.real { background:rgba(61,214,140,.12); color:#3dd68c; border:1px solid rgba(61,214,140,.4); }
+    .tag.red { background:rgba(255,90,95,.14); color:#ffb4b4; border:1px solid rgba(255,90,95,.45); }
+    .tag.teal { background:rgba(79,209,197,.12); color:#7fe6dc; border:1px solid rgba(79,209,197,.4); }
+    .tag.gray { background:#222a36; color:#9fb0b8; border:1px solid #2a3344; }
+    .lock { max-width:360px; margin:60px auto; }
+    .photos { display:flex; gap:8px; flex-wrap:wrap; margin:8px 0; }
+    .photos figure { margin:0; width:150px; }
+    .photos img { width:150px; height:110px; object-fit:cover; border-radius:10px; border:1px solid #2a3344; background:#0a0c10; }
+    .photos figcaption { font-size:10px; color:#8b95a8; margin-top:3px; }
+    .tl { display:flex; flex-wrap:wrap; gap:4px 10px; font-size:11px; color:#9fb0b8; margin:6px 0; }
+    .tl b { color:#e8f7f5; text-transform:capitalize; }
+    .barrow { display:grid; grid-template-columns:110px 1fr 56px; gap:8px; align-items:center; font-size:12px; margin:5px 0; }
+    .note { font-size:11px; color:#8b95a8; line-height:1.45; }
+    .qrow { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+    @media (min-width: 700px) { .app.adm-wrap { max-width: 980px; } }
+  </style>
+</head>
+<body class="shop-body">
+  <div class="app adm-wrap">
+    <div class="topbar">
+      <div class="brand shop"><img class="brand-lockup-img" src="/img/logo-header.png" alt="VendiPort" height="48" /><span class="pill" style="background:#5b2d8a;color:#fff">Admin</span></div>
+      <div class="mono" id="who"></div>
+    </div>
+
+    <section id="gate" class="card lock">
+      <div class="step-label">Owner access</div>
+      <p class="sub" style="margin-bottom:10px">Enter the admin passcode. (Set <code>ADMIN_PASSCODE</code> on the host.)</p>
+      <input class="vp-input" id="pw" type="password" placeholder="Passcode" autocomplete="current-password" />
+      <button class="vp-btn purple block" id="pw-go" style="margin-top:10px">Unlock</button>
+      <p class="vp-hint" id="pw-hint"></p>
+    </section>
+
+    <section id="app" class="hidden">
+      <div class="adm-tabs" id="tabs"></div>
+      <div id="view"></div>
+    </section>
+  </div>
+  <script src="/js/api.js"></script>
+  <script src="/js/admin.js"></script>
+</body>
+</html>
