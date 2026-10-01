@@ -223,8 +223,10 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     ok(r.json.trust.log.length > 3, 'Trust & safety has the resolution log table');
     // (h) demo disputes are labelled demo and cover each recommendation
     r = await call('GET', '/api/admin/disputes', null, A);
-    const recs = new Set(r.json.disputes.filter((d) => d.demo && d.status === 'open').map((d) => d.recommendation.action));
-    ok(r.json.disputes.filter((d) => d.demo).length >= 8 && recs.has('refund') && recs.has('deny') && recs.has('proof'), 'seeded DEMO disputes show refund / proof / deny recommendations');
+    const demoD = r.json.disputes.filter((d) => d.demo);
+    const recs = new Set(demoD.filter((d) => d.canAct).map((d) => d.recommendation.action));
+    ok(demoD.length >= 8 && recs.has('refund') && recs.has('deny') && recs.has('proof'), 'seeded DEMO open claims show refund / proof / deny recommendations');
+    ok(demoD.filter((d) => d.status === 'denied').length >= 2 && demoD.filter((d) => d.status === 'resolved').length >= 2 && demoD.every((d) => d.status !== 'open' || !d.resolvedAt), 'seeded DEMO claims include resolved + "Claim denied" history');
 
     console.log('20-store DEMO / projected network view');
     r = await call('GET', '/api/admin/network', null, A);
