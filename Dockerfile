@@ -4,6 +4,7 @@ WORKDIR /app
 # Zero runtime deps — copy app + seed data
 COPY package.json ./
 COPY server.js ./
+COPY lib ./lib
 COPY public ./public
 COPY data ./data
 

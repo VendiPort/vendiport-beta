@@ -8,3 +8,9 @@ public/img/pack/*
 !public/img/pack/.gitkeep
 public/img/confirmations/*
 !public/img/confirmations/.gitkeep
+
+public/img/boxes/*
+!public/img/boxes/.gitkeep
+public/img/breaks/*
+!public/img/breaks/.gitkeep
+data/extras.json

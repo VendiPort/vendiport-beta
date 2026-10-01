@@ -18,6 +18,8 @@ const DATA = process.env.DATA_DIR
   ? path.resolve(process.env.DATA_DIR)
   : path.join(ROOT, 'data');
 const PORT = Number(process.env.PORT) || 3847;
+let X = null; // beta extras (lib/extras.js)
+let ADMIN = null;
 
 const HOST = process.env.HOST || '0.0.0.0';
 const STRIPE_SECRET_KEY = (process.env.STRIPE_SECRET_KEY || '').trim();
@@ -150,6 +152,10 @@ function writeJson(name, value) {
   const tmp = file + '.tmp';
   fs.writeFileSync(tmp, JSON.stringify(value, null, 2) + '\n');
   fs.renameSync(tmp, file);
+  if (name === 'products.json' && X && !writeJson._pending) {
+    writeJson._pending = true;
+    setImmediate(() => { writeJson._pending = false; try { X.scanRadar(); } catch (e) { console.error('scanRadar', e.message); } });
+  }
 }
 
 function ensureDataDir() {
@@ -329,12 +335,17 @@ function publicOrder(o) {
     amendedAt: o.amendedAt || null,
     cancelFeeEstimate: +((paidProductTotal(o) || o.productPrice || 0) * CANCEL_FEE_RATE).toFixed(2),
     salesFinal: ['PICKED_UP', 'DELIVERED_ACCEPTED', 'REFUSED_SEAL'].includes(o.status),
+    ...(X ? X.orderExtras(o) : {}),
   };
 }
 
 function shopOrder(o) {
   return {
     ...publicOrder(o),
+    smsLog: undefined,
+    notify: undefined,
+    deliveryCode: undefined,
+    disputeId: undefined,
     shopId: o.shopId,
     toteQrLinkedAt: o.toteQrLinkedAt || null,
     packPhotoNote: o.packPhotoNote || null,
@@ -356,6 +367,7 @@ function findOrder(id) {
 function saveOrder(updated) {
   const orders = readJson('orders.json', []);
   const i = orders.findIndex((o) => o.id === updated.id);
+  if (X) X.beforeSave(i === -1 ? null : orders[i], updated);
   if (i === -1) orders.push(updated);
   else orders[i] = updated;
   writeJson('orders.json', orders);
@@ -370,6 +382,9 @@ function serveStatic(req, res, urlPath) {
   if (rel.startsWith('/handoff/')) rel = '/handoff.html';
   if (rel.startsWith('/track/') || rel.startsWith('/order/')) rel = '/track.html';
   if (rel === '/pay/success' || rel === '/pay/success/') rel = '/pay-success.html';
+  if (rel === '/admin' || rel === '/admin/') rel = '/admin.html';
+  if (/^\/(collection|my-collection|my-breaks|radar)\/?$/.test(rel)) rel = '/collection.html';
+  if (rel === '/breaks' || rel === '/breaks/' || rel.startsWith('/breaks/')) rel = '/breaks.html';
   if (rel === '/track' || rel === '/order') rel = '/track.html';
 
   const filePath = path.normalize(path.join(PUBLIC, rel));
@@ -548,6 +563,9 @@ function syncProductsToShopWindow(sw, removedId) {
 async function handleApi(req, res, pathname) {
   const method = req.method.toUpperCase();
 
+  if (X && (await X.handle(req, res, pathname))) return;
+  if (ADMIN && (await ADMIN.handle(req, res, pathname))) return;
+
   // GET /api/health
   if (method === 'GET' && pathname === '/api/health') {
     return send(res, 200, { ok: true, brand: 'VendiPort', port: PORT, dataDir: DATA, payMode: stripeTestModeEnabled() ? 'stripe_test' : 'stub' });
@@ -559,7 +577,7 @@ async function handleApi(req, res, pathname) {
     const shopScope = u.searchParams.get('scope') === 'shop';
     const shop = getPrimaryShop();
     const products = readJson('products.json', [])
-      .filter((p) => shopScope || !p.hidden)
+      .filter((p) => (shopScope ? true : X.buyerVisible(p)))
       .map((p) => {
         const windows = shopScope
           ? (p.windows || []).map((w) => ({ id: w.id, label: w.label, units: w.units }))
@@ -575,7 +593,7 @@ async function handleApi(req, res, pathname) {
                 : null,
             }))
           : [];
-        return {
+        return X.decorateProduct({
           id: p.id,
           title: p.title,
           subtitle: p.subtitle,
@@ -592,10 +610,11 @@ async function handleApi(req, res, pathname) {
             ? { id: earliest.id, label: earliest.label, units: earliest.units }
             : null,
           windows,
-        };
+        }, p, shopScope ? 'shop' : 'buyer');
       });
     return send(res, 200, {
       products,
+      paused: !shopScope && X.primaryShop() ? !!X.shopState(X.primaryShop().id).paused : false,
       deliveryFee: DELIVERY_FEE,
       minOrder: MIN_ORDER,
       minOrderPrd: 75,
@@ -687,6 +706,9 @@ async function handleApi(req, res, pathname) {
     }
     if (body.emoji != null) product.emoji = String(body.emoji);
     if (body.barcode != null) product.barcode = String(body.barcode).trim() || null;
+    if (body.soldOut === true) {
+      (product.windows || []).forEach((w) => { w.units = 0; });
+    }
     if (body.units != null || body.windowLabel != null) {
       const units = body.units != null ? Math.max(0, parseInt(body.units, 10) || 0) : null;
       if (!product.windows || !product.windows.length) {
@@ -1041,7 +1063,8 @@ async function handleApi(req, res, pathname) {
     const id = pathname.slice('/api/orders/'.length);
     const order = findOrder(id);
     if (!order) return sendError(res, 404, 'Order not found');
-    return send(res, 200, { order: publicOrder(order) });
+    const code = ['READY', 'PICKED_UP', 'DELIVERED_ACCEPTED'].includes(order.status) ? X.deliveryCodeFor(order) : null;
+    return send(res, 200, { order: Object.assign(publicOrder(order), { deliveryCode: code }) });
   }
 
   // GET /api/stats — shop demo stats (JSON-backed)
@@ -1088,6 +1111,8 @@ async function handleApi(req, res, pathname) {
     if (product.price < MIN_ORDER) {
       return sendError(res, 400, `Min order for delivery is $${MIN_ORDER}`);
     }
+    const blocked = X.preOrder(body);
+    if (blocked) return sendError(res, 409, blocked);
 
     const shops = readJson('shops.json', []);
     const shop = shops[0];
@@ -1129,6 +1154,7 @@ async function handleApi(req, res, pathname) {
       pendingAddon: null,
     };
     recalcOrderTotals(order);
+    X.attachBuyer(order, body);
 
     // Decrement window units on pay only (reserve on pay for MVP)
     saveOrder(order);
@@ -1249,6 +1275,9 @@ async function handleApi(req, res, pathname) {
     if (!order.sealConfirmed) {
       return sendError(res, 409, 'Confirm seal (zip+VOID) before READY');
     }
+    if (process.env.REQUIRE_PACK_CHECKLIST !== '0' && !(order.packChecklist && order.packChecklist.done)) {
+      return sendError(res, 409, 'Finish the packing checklist + sealed-box photo before READY');
+    }
     if (!order.toteQrPayload) {
       return sendError(res, 409, 'Tote QR identity missing — reshoot pack photo or link bag QR');
     }
@@ -1296,6 +1325,17 @@ async function handleApi(req, res, pathname) {
     if (!['PICKED_UP', 'READY'].includes(order.status)) {
       return sendError(res, 409, `Cannot accept from ${order.status}`);
     }
+    if (body.sealIntact === false) {
+      // Seal check answered "No" → route to a dispute instead of accepting
+      const d = X.sealDispute(order, body.note || 'Buyer reported the seal was not intact at handoff.', X.saveDataImage('boxes', 'dispute-' + order.id.slice(0, 8), body.confirmImage || body.photo), 'seal_not_intact');
+      order.updatedAt = new Date().toISOString();
+      saveOrder(order);
+      return send(res, 200, { disputed: true, dispute: { id: d.id, status: d.status }, order: publicOrder(order) });
+    }
+    if (order.disputeId && X.S().disputes.some((d) => d.id === order.disputeId && d.status === 'open')) {
+      return sendError(res, 409, 'A seal dispute is open for this order — VendiPort will review it before it can be accepted.');
+    }
+    if (body.sealIntact === true) order.sealCheck = { intact: true, at: new Date().toISOString() };
     if (order.status === 'READY') {
       order.status = 'PICKED_UP';
       order.pickedUpAt = new Date().toISOString();
@@ -1474,6 +1514,8 @@ async function handleApi(req, res, pathname) {
         'Cancel closed after driver pickup. All sales final except seal refuse.'
       );
     }
+    const cbody = await readBody(req).catch(() => ({}));
+    order.cancelReason = String((cbody && cbody.reason) || 'No reason given').slice(0, 80);
     ensureLineItems(order);
     const productTotal = paidProductTotal(order);
     const cancelFee = +(productTotal * CANCEL_FEE_RATE).toFixed(2);
@@ -1550,6 +1592,12 @@ function transition(res, id, from, to) {
   return send(res, 200, { order: shopOrder(order) });
 }
 
+X = require('./lib/extras').createExtras({
+  readJson, writeJson, send, sendError, readBody, findOrder, saveOrder, findProduct, publicOrder,
+  PUBLIC, DATA_DIR: () => DATA,
+});
+ADMIN = require('./lib/admin').createAdmin({ readJson, send, sendError, readBody, findOrder, saveOrder, publicOrder }, X);
+
 const server = http.createServer(async (req, res) => {
   try {
     const u = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
@@ -1568,11 +1616,13 @@ const server = http.createServer(async (req, res) => {
     return serveStatic(req, res, pathname);
   } catch (err) {
     console.error(err);
+    if (X) X.logError(err.message);
     sendError(res, 500, err.message || 'Server error');
   }
 });
 
 ensureDataDir();
+try { X.scanRadar(); } catch (e) { console.error('radar init', e.message); }
 server.listen(PORT, HOST, () => {
   console.log(`VendiPort beta listening on http://${HOST}:${PORT}`);
   console.log(`  Health:  http://${HOST}:${PORT}/health`);
@@ -1580,6 +1630,7 @@ server.listen(PORT, HOST, () => {
   console.log(`  Shop:    http://${HOST}:${PORT}/shop`);
   console.log(`  Account: http://${HOST}:${PORT}/account`);
   console.log(`  Member:  http://${HOST}:${PORT}/member`);
+  console.log(`  Admin:   http://${HOST}:${PORT}/admin`);
   console.log(`  Handoff: http://${HOST}:${PORT}/handoff/<orderId>`);
   console.log(`  Track:   http://${HOST}:${PORT}/track/<orderId>`);
   console.log(`  Data:    ${DATA}`);
