@@ -1242,7 +1242,7 @@ async function handleApi(req, res, pathname) {
     return send(res, 200, { order: shopOrder(order) });
   }
 
-  // POST /api/orders/:id/seal — confirm zip-tie + VOID label
+  // POST /api/orders/:id/seal — confirm the sealed bag
   if (method === 'POST' && /^\/api\/orders\/[^/]+\/seal$/.test(pathname)) {
     const id = pathname.split('/')[3];
     const order = findOrder(id);
@@ -1251,10 +1251,10 @@ async function handleApi(req, res, pathname) {
     if (!order.packPhotoStub) return sendError(res, 409, 'Capture pack photo stub first');
     order.sealConfirmed = true;
     order.sealChecklist = {
-      zipTie: true,
-      voidLabel: true,
+      bagSealed: true,
+      tearStripIntact: true,
       qrLast4: order.id.slice(-4).toUpperCase(),
-      copy: 'Zip both pulls · one zip tie through both loops · VOID wrap on lock head (physical seal). Tote QR is already printed on the bag — not a sticker.',
+      copy: 'Press the bag closed so the peel-and-seal strip is fully sealed · tear strip intact. QR-in-V is already printed on the bag — not a sticker.',
     };
     order.updatedAt = new Date().toISOString();
     saveOrder(order);
@@ -1273,7 +1273,7 @@ async function handleApi(req, res, pathname) {
       return sendError(res, 409, 'Pack photo with tote QR required before READY (sale identity)');
     }
     if (!order.sealConfirmed) {
-      return sendError(res, 409, 'Confirm seal (zip+VOID) before READY');
+      return sendError(res, 409, 'Confirm the bag is sealed before READY');
     }
     if (process.env.REQUIRE_PACK_CHECKLIST !== '0' && !(order.packChecklist && order.packChecklist.done)) {
       return sendError(res, 409, 'Finish the packing checklist + sealed-box photo before READY');

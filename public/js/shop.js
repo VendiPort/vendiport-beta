@@ -415,7 +415,7 @@ function jobCard(o) {
     <div class="panel" style="margin-top:8px">
       <div class="panel-label">Seal (physical — separate from QR)</div>
       <p style="font-size:11px;color:var(--muted);margin:0;line-height:1.4">
-        Zip both pulls · one zip tie through both loops · VOID wrap on lock head ·
+        Press the Mylar bag shut so the peel-and-seal strip is fully sealed · tear strip intact ·
         “Only accept if untampered.” QR stays the pre-printed code on the bag.
       </p>
     </div>
@@ -509,7 +509,7 @@ function jobCard(o) {
       actions.appendChild(btn('Reshoot pack photo', 'btn-ghost', () => capturePackPhoto(o)));
     }
     if (o.packPhotoStub && !o.sealConfirmed) {
-      actions.appendChild(btn('Confirm seal (zip+VOID)', 'btn-teal', () => act(o.id, 'seal')));
+      actions.appendChild(btn('Confirm bag sealed', 'btn-teal', () => act(o.id, 'seal')));
     }
     if (o.sealConfirmed) {
       const done = o.packChecklist && o.packChecklist.done;

@@ -91,7 +91,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     ok(r.status === 409, 'wrong delivery code rejected');
     r = await call('POST', `/api/orders/${id}/arrive-proof`, { code: o.deliveryCode });
     ok(r.status === 200 && r.json.order.proofType === 'code' && r.json.order.arrivePhotoStub, 'delivery code unlocks handoff');
-    r = await call('POST', `/api/orders/${id}/accept`, { qrPayload: 'VENDIPORT:ORDER:' + id, confirmImage: PNG, sealIntact: false, note: 'zip tie cut' });
+    r = await call('POST', `/api/orders/${id}/accept`, { qrPayload: 'VENDIPORT:ORDER:' + id, confirmImage: PNG, sealIntact: false, note: 'tear strip pulled' });
     ok(r.json.disputed === true && r.json.order.status === 'PICKED_UP', 'seal check "No" routes to dispute (not accepted)');
     r = await call('POST', `/api/orders/${id}/accept`, { qrPayload: 'VENDIPORT:ORDER:' + id, confirmImage: PNG, sealIntact: true });
     ok(r.status === 409, 'accept blocked while dispute is open');

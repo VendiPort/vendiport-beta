@@ -26,7 +26,7 @@ npm start
 ## Happy path
 
 1. Buyer → push slot → checkout → Pay stub → **Track** `/track/<id>` (Paid → Packing → Ready → Out → Arrive → Scan tote QR)
-2. Shop Jobs → pack photo (product + tote QR in frame) → seal zip+VOID → READY → pickup → arrive
+2. Shop Jobs → pack photo (product + tote QR in frame) → confirm bag sealed → READY → pickup → arrive
 3. Handoff → scan/upload **QR on tote bag** to accept
 
 Shop tabs: **Jobs · Inventory · Windows · Stats** (orders today by status, units listed, own-driver).

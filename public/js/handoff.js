@@ -67,7 +67,7 @@ function render(order) {
       <div class="panel">
         <div class="panel-label">Sealed tote bag</div>
         <p style="font-size:13px;color:var(--muted);margin:0;line-height:1.4">
-          Confirm everything is intact (zip-tie + VOID). Then scan or upload a photo of the
+          Confirm the bag is intact (tear strip not pulled, seal not lifted). Then scan or upload a photo of the
           <strong>QR printed on your tote bag</strong> — it must match the tote QR from the shop’s pack photo
           (last-4 ${order.last4}). That photo goes to the shop as drop-off proof.
         </p>
@@ -358,13 +358,13 @@ async function acceptWithQr(order, payload, confirmImage) {
 
 /** Seal check at handoff: "Was the seal intact?" must be answered before Accept. "No" routes to a dispute. */
 function askSealCheck(order, payload, confirmImage) {
-  const body = VPX.openSheet('Seal check', 'Look at the zip tie and VOID label before you accept', `
+  const body = VPX.openSheet('Seal check', 'Check that the bag is still sealed before you accept', `
     <div class="vp-seal-q">
       <div style="font-size:42px">🛡️</div>
       <div class="big">Was the seal intact?</div>
-      <p class="vp-hint" style="margin:0">Zip tie not cut · VOID label not peeled · tote not opened. Saying <b>No</b> opens a dispute — VendiPort reviews it with the shop’s sealed-box photo. You won’t be charged until it’s resolved.</p>
+      <p class="vp-hint" style="margin:0">Tear strip not pulled · seal not lifted · bag not opened. Saying <b>No</b> opens a dispute — VendiPort reviews it with the shop’s sealed-box photo. You won’t be charged until it’s resolved.</p>
       <div class="two"><button type="button" class="vp-btn" id="seal-yes">Yes — intact<br><small>Accept</small></button><button type="button" class="vp-btn red" id="seal-no">No — tampered<br><small>Report</small></button></div>
-      <div id="seal-note-wrap" class="hidden" style="text-align:left;margin-top:12px"><label class="vp-lbl">What did you see? (optional)</label><textarea class="vp-textarea" id="seal-note" placeholder="Zip tie cut, VOID label peeled…"></textarea><button type="button" class="vp-btn red block" id="seal-send" style="margin-top:8px">Open dispute</button></div>
+      <div id="seal-note-wrap" class="hidden" style="text-align:left;margin-top:12px"><label class="vp-lbl">What did you see? (optional)</label><textarea class="vp-textarea" id="seal-note" placeholder="Tear strip pulled, seal lifted…"></textarea><button type="button" class="vp-btn red block" id="seal-send" style="margin-top:8px">Open dispute</button></div>
     </div>`);
   body.querySelector('#seal-yes').addEventListener('click', () => submitAccept(order, payload, confirmImage, true));
   body.querySelector('#seal-no').addEventListener('click', () => { body.querySelector('#seal-note-wrap').classList.remove('hidden'); });

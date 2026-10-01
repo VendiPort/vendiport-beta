@@ -26,10 +26,10 @@
     "packPhotoNote": "Stub: pack photo of product on tote with QR in frame (camera not wired).",
     "sealConfirmed": true,
     "sealChecklist": {
-      "zipTie": true,
-      "voidLabel": true,
+      "bagSealed": true,
+      "tearStripIntact": true,
       "qrLast4": "6AB8",
-      "copy": "Zip both pulls · one zip tie through both loops · VOID wrap on lock head · QR + last-4 + Only accept if untampered"
+      "copy": "Press the bag closed so the peel-and-seal strip is fully sealed · tear strip intact · QR + last-4 + Only accept if untampered"
     },
     "sealedAt": "2026-09-16T00:23:18.153Z",
     "pickedUpAt": "2026-09-16T00:23:18.160Z",
@@ -74,8 +74,8 @@
     "packPhotoNote": "Auto-stubbed pack photo for READY shortcut",
     "sealConfirmed": true,
     "sealChecklist": {
-      "zipTie": true,
-      "voidLabel": true,
+      "bagSealed": true,
+      "tearStripIntact": true,
       "qrLast4": "84A7",
       "copy": "Seal checklist auto-confirmed on READY"
     },
@@ -135,10 +135,10 @@
     "packPhotoNote": "Stub: pack photo of product on tote with QR in frame (camera not wired).",
     "sealConfirmed": true,
     "sealChecklist": {
-      "zipTie": true,
-      "voidLabel": true,
+      "bagSealed": true,
+      "tearStripIntact": true,
       "qrLast4": "D3F8",
-      "copy": "Zip both pulls · one zip tie through both loops · VOID wrap on lock head · QR + last-4 + Only accept if untampered"
+      "copy": "Press the bag closed so the peel-and-seal strip is fully sealed · tear strip intact · QR + last-4 + Only accept if untampered"
     },
     "sealedAt": "2026-09-16T01:06:01.837Z",
     "toteQrLinkedAt": "2026-09-16T01:07:22.399Z",
@@ -200,10 +200,10 @@
     "toteQrFromPackPhoto": true,
     "sealConfirmed": true,
     "sealChecklist": {
-      "zipTie": true,
-      "voidLabel": true,
+      "bagSealed": true,
+      "tearStripIntact": true,
       "qrLast4": "D69C",
-      "copy": "Zip both pulls · one zip tie through both loops · VOID wrap on lock head (physical seal). Tote QR is already printed on the bag — not a sticker."
+      "copy": "Press the bag closed so the peel-and-seal strip is fully sealed · tear strip intact. QR-in-V is already printed on the bag — not a sticker."
     },
     "sealedAt": "2026-09-16T04:45:03.593Z",
     "pickedUpAt": "2026-09-16T04:45:03.594Z",
