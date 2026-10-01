@@ -58,7 +58,11 @@ async function init() {
   else if (location.hash === '#windows') switchTab('windows');
   else if (location.hash === '#inventory') switchTab('inventory');
   else if (location.hash === '#stats') switchTab('stats');
+  else if (location.hash === '#wanted') switchTab('wanted');
+  else if (location.hash === '#earnings') switchTab('earnings');
 
+  wirePause();
+  loadWantedBadge();
   await refreshJobs();
   startJobsPoll();
   const arm = qs('#sale-sound-arm');
@@ -92,19 +96,25 @@ function switchTab(name) {
   qs('#tab-jobs').classList.toggle('hidden', name !== 'jobs');
   qs('#tab-inventory').classList.toggle('hidden', name !== 'inventory');
   qs('#tab-windows').classList.toggle('hidden', name !== 'windows');
+  qs('#tab-wanted').classList.toggle('hidden', name !== 'wanted');
+  qs('#tab-earnings').classList.toggle('hidden', name !== 'earnings');
   const statsEl = qs('#tab-stats');
   if (statsEl) statsEl.classList.toggle('hidden', name !== 'stats');
   qs('#page-title').textContent =
-    name === 'jobs' ? 'Jobs' : name === 'inventory' ? 'Inventory' : name === 'windows' ? 'Windows' : 'Stats';
+    name === 'jobs' ? 'Jobs' : name === 'inventory' ? 'Inventory' : name === 'windows' ? 'Windows' : name === 'wanted' ? 'Wanted' : name === 'earnings' ? 'Earnings' : 'Stats';
   qs('#page-sub').textContent =
     name === 'jobs' ? 'Shop stream: PAID → pack → seal → READY → pickup → done'
     : name === 'inventory' ? 'Upload sealed SKUs to the anonymous machine'
     : name === 'windows' ? 'Shop delivery windows · own-driver toggle'
+    : name === 'wanted' ? 'Ranked buyer demand · tap “I have this” to list it and alert followers'
+    : name === 'earnings' ? 'Daily payout summary · what you’ve earned'
     : 'Orders today · units listed · own-driver';
   if (name !== 'inventory') stopBarcodeScan();
   if (name === 'inventory') loadInventory();
   if (name === 'windows') loadWindows();
   if (name === 'stats') loadStats();
+  if (name === 'wanted') loadWanted();
+  if (name === 'earnings') loadEarnings();
 }
 
 async function loadStats() {
@@ -480,6 +490,10 @@ function jobCard(o) {
     listEl.appendChild(row);
   }
 
+  if (['PAID', 'PACKING'].includes(o.status)) {
+    const pc = packChecklistEl(o);
+    el.insertBefore(pc, el.querySelector('.job-actions'));
+  }
   const actions = el.querySelector('.job-actions');
   // Locked stream: PAID alert → Start pack ONLY (no pack/ready until PACKING)
   if (o.status === 'PAID') {
@@ -498,7 +512,10 @@ function jobCard(o) {
       actions.appendChild(btn('Confirm seal (zip+VOID)', 'btn-teal', () => act(o.id, 'seal')));
     }
     if (o.sealConfirmed) {
-      actions.appendChild(btn('Mark READY', 'btn-teal', () => act(o.id, 'ready')));
+      const done = o.packChecklist && o.packChecklist.done;
+      const rb = btn(done ? 'Mark READY' : 'Mark READY (finish checklist first)', 'btn-teal', () => act(o.id, 'ready'));
+      if (!done) rb.disabled = true;
+      actions.appendChild(rb);
     }
   }
   if (o.status === 'READY') {
@@ -534,6 +551,30 @@ function jobCard(o) {
     });
   }
   return el;
+}
+
+function packChecklistEl(o) {
+  const items = o.checklistItems || [];
+  const cur = (o.packChecklist && o.packChecklist.checks) || {};
+  const photo = o.packChecklist && o.packChecklist.boxPhoto;
+  const d = document.createElement('div');
+  d.className = 'pack-check';
+  d.innerHTML = `<div class="panel-label" style="margin-bottom:6px">Packing checklist · sealed-box photo</div>
+    ${items.map((i) => `<label class="vp-check"><input type="checkbox" data-c="${i.id}" ${cur[i.id] ? 'checked' : ''}/> <span>${escapeHtml(i.label)}</span></label>`).join('')}
+    ${photo && photo !== 'stub' ? `<img class="box-photo-thumb" src="${escapeHtml(photo)}" alt="Sealed box photo" />` : ''}
+    <div class="vp-row" style="margin-top:8px"><button type="button" class="vp-btn ghost sm" data-a="photo">📷 ${photo ? 'Retake' : 'Add'} sealed-box photo</button>
+    <button type="button" class="vp-btn sm" data-a="save">Save checklist</button></div>
+    <input type="file" accept="image/*" capture="environment" class="hidden" data-f="1" />
+    <p class="vp-hint" style="margin:6px 0 0">${o.packChecklist && o.packChecklist.done ? '<b style="color:#7fe6dc">✓ Checklist complete + box photo — you can mark READY.</b>' : 'Tick everything and add a sealed-box photo before READY. (Photo storage is a stub in beta.)'}</p>`;
+  const file = d.querySelector('[data-f]');
+  const checks = () => Object.fromEntries(items.map((i) => [i.id, d.querySelector(`[data-c="${i.id}"]`).checked]));
+  const post = async (extra) => {
+    try { await api(`/api/orders/${o.id}/pack-checklist`, { method: 'POST', body: JSON.stringify(Object.assign({ checks: checks() }, extra || {})) }); await refreshJobs(); toast('Checklist saved'); } catch (e) { toast(e.message); }
+  };
+  d.querySelector('[data-a="save"]').addEventListener('click', () => post());
+  d.querySelector('[data-a="photo"]').addEventListener('click', () => file.click());
+  file.addEventListener('change', async () => { const f = file.files && file.files[0]; if (!f) return; const url = await fileToDataUrlShop(f); post({ boxPhoto: url }); });
+  return d;
 }
 
 function btn(label, cls, onClick) {
@@ -657,6 +698,14 @@ async function loadInventory() {
   const { products } = await api('/api/products?scope=shop');
   const list = qs('#inv-list');
   list.innerHTML = '';
+  const low = products.filter((p) => p.stock && p.stock.low && !p.hidden);
+  if (low.length) {
+    const w = document.createElement('div');
+    w.className = 'banner warn';
+    w.style.marginBottom = '10px';
+    w.innerHTML = `⚠ Low stock: ${low.map((p) => escapeHtml(p.title) + ' (' + p.stock.total + ')').join(' · ')}`;
+    list.appendChild(w);
+  }
   for (const p of products) {
     const el = document.createElement('article');
     el.className = 'card';
@@ -673,12 +722,17 @@ async function loadInventory() {
             ${p.hidden ? '<span class="status-tag CANCELLED">HIDDEN</span>' : '<span class="status-tag READY">LIVE</span>'}
           </div>
           <div class="mono">${escapeHtml(p.category)} · ${money(p.price)} · ${earliest ? earliest.units + ' @ ' + earliest.label : 'no window'}${p.barcode ? ' · barcode ' + escapeHtml(p.barcode) : ''}</div>
+          <div style="margin-top:5px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+            ${p.stock && p.stock.soldOut ? '<span class="stock-out">⛔ 0 stock — auto-hidden from buyers</span>' : p.stock && p.stock.low ? `<span class="stock-low">⚠ Low stock · ${p.stock.total} left</span>` : `<span class="mono">${p.stock ? p.stock.total : ''} total units</span>`}
+            ${p.wantedBuyers ? `<span class="want-badge" title="${escapeHtml((p.wantedLabels || []).join(' · '))}">★ Someone wants this · ${p.wantedBuyers} buyer${p.wantedBuyers > 1 ? 's' : ''}</span>` : ''}
+          </div>
         </div>
       </div>
       <div class="inv-actions">
         <button type="button" class="btn btn-sm btn-ghost" data-a="price">Edit price</button>
         <button type="button" class="btn btn-sm btn-ghost" data-a="units">Edit units</button>
         <button type="button" class="btn btn-sm btn-ghost" data-a="hide">${p.hidden ? 'Unhide' : 'Hide'}</button>
+        <button type="button" class="btn btn-sm btn-ghost" data-a="sold">Mark sold out</button>
       </div>`;
     el.querySelector('[data-a="price"]').onclick = async () => {
       const v = prompt('New price', p.price);
@@ -692,6 +746,11 @@ async function loadInventory() {
       if (v == null) return;
       await api(`/api/products/${p.id}`, { method: 'PATCH', body: JSON.stringify({ units: Number(v) }) });
       toast('Units updated');
+      loadInventory();
+    };
+    el.querySelector('[data-a="sold"]').onclick = async () => {
+      await api(`/api/products/${p.id}`, { method: 'PATCH', body: JSON.stringify({ soldOut: true }) });
+      toast('Sold out — hidden from buyers until restocked');
       loadInventory();
     };
     el.querySelector('[data-a="hide"]').onclick = async () => {
@@ -1006,3 +1065,114 @@ function escapeHtml(s) {
 document.addEventListener('DOMContentLoaded', () => {
   init().catch((e) => toast(e.message));
 });
+
+
+// ---------------- Pause switch (11) ----------------
+async function wirePause() {
+  const sw = qs('#pause-switch');
+  if (!sw) return;
+  const paint = (st) => {
+    sw.checked = !!st.paused;
+    qs('#pause-title').textContent = st.paused ? 'PAUSED — SKUs hidden' : 'Open for orders';
+    qs('#pause-copy').textContent = st.paused ? 'Buyers can’t see or order your boxes. Flip off to reopen.' : 'Pause when closing early or on vacation — hides all your SKUs from the machine.';
+    qs('#pause-card').classList.toggle('pause-on', !!st.paused);
+    const v = st.verification;
+    const vn = qs('#verify-note');
+    if (vn) {
+      if (v && v.status && v.status !== 'verified' && v.status !== 'approved') {
+        vn.innerHTML = `<div class="banner warn" style="margin-bottom:10px">Business ID ${escapeHtml(v.status)} — VendiPort reviews it before you go live.</div>`;
+      } else vn.innerHTML = '';
+    }
+  };
+  try { paint(await api('/api/shop/status')); } catch (_) {}
+  sw.addEventListener('change', async () => {
+    try {
+      const r = await api('/api/shop/pause', { method: 'POST', body: JSON.stringify({ paused: sw.checked, reason: sw.checked ? 'Closing early' : '' }) });
+      paint(r); toast(r.message);
+    } catch (e) { toast(e.message); sw.checked = !sw.checked; }
+  });
+}
+
+// ---------------- Wanted feed (15) ----------------
+async function loadWantedBadge() {
+  try {
+    const { wanted } = await api('/api/wanted');
+    const n = wanted.filter((w) => !w.iHave && !w.listedNow.length).length;
+    const b = qs('#wanted-badge');
+    if (b) { b.textContent = n || ''; b.dataset.count = n; }
+  } catch (_) {}
+}
+async function loadWanted() {
+  const host = qs('#wanted-body');
+  try {
+    const d = await api('/api/wanted');
+    if (!d.wanted.length) { host.innerHTML = 'No demand yet.'; return; }
+    host.className = '';
+    host.innerHTML = (d.demoSeeded ? '<div class="mono" style="margin-bottom:8px"><span class="status-tag CANCELLED">DEMO</span> includes seeded demo demand · ' + d.totalBuyers + ' anonymous buyers total</div>' : '') +
+      d.wanted.map((w, i) => {
+        const zips = w.zips.length ? w.zips.map((z) => `<span class="status-tag ${z.inArea ? 'READY' : 'CANCELLED'}" title="${z.inArea ? 'In service area' : 'Outside service area'}">${escapeHtml(z.zip)} ×${z.n}</span>`).join(' ') : '<span class="mono">spread across many ZIPs</span>';
+        const growth = w.growth7d ? `<span class="mono" style="color:#7fe6dc">▲ ${w.growth7d} new this week</span>` : '';
+        let state = '';
+        if (w.iHave) state = `<span class="status-tag ${w.iHave.status === 'listed' ? 'READY' : 'PACKING'}">${w.iHave.status === 'listed' ? 'LISTED · followers alerted' : 'FLAGGED'}</span>`;
+        else if (w.listedNow.length) state = `<span class="status-tag READY">IN STOCK · ${escapeHtml(w.listedNow[0].title)}</span>`;
+        return `<div class="wanted-row" data-key="${escapeHtml(w.key)}">
+          <div class="row-between" style="align-items:flex-start;gap:10px">
+            <div style="display:flex;gap:10px;align-items:flex-start"><div class="rank">${i + 1}</div><div><div class="nm">${escapeHtml(w.label)}</div><div class="mono">${w.kind === 'box' ? 'Sealed box' : 'Chase card / player'}</div></div></div>
+            <div style="text-align:right"><div class="big">${w.buyers}</div><div class="bl">buyers want it</div></div>
+          </div>
+          <div style="margin:8px 0;display:flex;gap:5px;flex-wrap:wrap;align-items:center"><span class="mono">Area demand:</span> ${zips}${w.otherAreas ? `<span class="mono">+${w.otherAreas} more ZIPs</span>` : ''}</div>
+          <div class="row-between"><div>${growth} ${state}</div>
+          <button type="button" class="btn btn-teal btn-sm" data-have="1" ${w.iHave && w.iHave.status === 'listed' ? 'disabled' : ''}>I have this</button></div>
+        </div>`;
+      }).join('');
+    host.querySelectorAll('.wanted-row').forEach((row) => {
+      const w = d.wanted.find((x) => x.key === row.dataset.key);
+      row.querySelector('[data-have]').addEventListener('click', () => iHaveThis(w));
+    });
+    loadWantedBadge();
+  } catch (e) { host.innerHTML = escapeHtml(e.message); }
+}
+async function iHaveThis(w) {
+  const existing = w.listedNow && w.listedNow[0];
+  let units = 0, price = 0;
+  if (existing) {
+    const v = prompt(`“${w.label}” matches ${existing.title} (${existing.units} on the machine).\nAdd more units? Enter 0 to just alert followers.`, '0');
+    if (v == null) return;
+    units = Math.max(0, parseInt(v, 10) || 0);
+  } else {
+    const v = prompt(`How many “${w.label}” do you have in stock?\n(Enter 0 to just flag that you have it — you can list it later.)`, '2');
+    if (v == null) return;
+    units = Math.max(0, parseInt(v, 10) || 0);
+    if (units > 0 && w.kind === 'box' && !w.productId) { const p = prompt('Price per box ($)?', '40'); if (p == null) return; price = Number(p) || 0; }
+  }
+  try {
+    const r = await api('/api/wanted/have', { method: 'POST', body: JSON.stringify({ key: w.key, units, price, productId: existing ? existing.id : undefined }) });
+    toast(r.message, 5000);
+    await loadWanted();
+  } catch (e) { toast(e.message); }
+}
+
+// ---------------- Earnings (10) ----------------
+async function loadEarnings() {
+  const host = qs('#earn-body');
+  try {
+    const e = await api('/api/shop/earnings');
+    const t = e.today;
+    host.className = '';
+    host.innerHTML = `
+      <div class="card teal"><div class="step-label">Today · ${escapeHtml(t.day)}</div>
+        <div class="line total"><span>Net payout</span><span>${money(t.net)}</span></div>
+        <div class="line"><span class="muted">Delivered orders</span><span>${t.delivered}</span></div>
+        <div class="line"><span class="muted">Product sales</span><span>${money(t.sales)}</span></div>
+        <div class="line"><span class="muted">VendiPort fee (${Math.round(e.platformTake * 100)}%)</span><span>−${money(t.platformFee)}</span></div>
+        ${e.ownDriver ? `<div class="line"><span class="muted">Delivery fees kept (own-driver)</span><span>+${money(t.deliveryKept)}</span></div>` : ''}
+        <div class="line"><span class="muted">Cancel-fee share</span><span>+${money(t.cancelShare)}</span></div>
+      </div>
+      <div class="card"><div class="step-label">Coming up</div>
+        <div class="line"><span class="muted">In progress (${e.pendingCount} order${e.pendingCount === 1 ? '' : 's'})</span><span>${money(e.pending)}</span></div>
+        <p class="mono" style="margin-top:6px">${escapeHtml(e.payoutNote)}</p></div>
+      <div class="card"><div class="step-label">Last 7 days</div>
+        ${e.days.length ? e.days.map((d) => `<div class="line"><span class="muted">${escapeHtml(d.day)} · ${d.delivered} delivered</span><span>${money(d.net)}</span></div>`).join('') : '<div class="mono">No deliveries yet.</div>'}
+        <div class="line total"><span>All-time net</span><span>${money(e.totalNet)}</span></div></div>`;
+  } catch (er) { host.innerHTML = escapeHtml(er.message); }
+}

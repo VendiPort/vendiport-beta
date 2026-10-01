@@ -7,11 +7,12 @@
   <title>VendiPort — Shop</title>
   <link rel="stylesheet" href="/css/app.css" />
   <link rel="stylesheet" href="/css/machine.css" />
+  <link rel="stylesheet" href="/css/extras.css" />
   <style>
-    .tabs { display:flex; gap:6px; margin: 10px 0 14px; }
+    .tabs { display:flex; gap:4px; margin: 10px 0 14px; flex-wrap:wrap; }
     .tab {
       flex:1; border:1px solid #2a3344; background:#12161e; color:#cfd6e2;
-      padding:10px 8px; border-radius:10px; font-weight:800; font-size:12px; letter-spacing:.04em;
+      padding:10px 4px; border-radius:10px; font-weight:800; font-size:11px; letter-spacing:.02em; min-width:0;
     }
     .tab.on { background:#e84a4a; border-color:#e84a4a; color:#fff; }
     .field { margin-bottom:10px; }
@@ -104,6 +105,8 @@
       <button type="button" class="tab on" data-tab="jobs">Jobs<span class="badge" id="jobs-badge" data-count="0"></span></button>
       <button type="button" class="tab" data-tab="inventory">Inventory</button>
       <button type="button" class="tab" data-tab="windows">Windows</button>
+      <button type="button" class="tab" data-tab="wanted">Wanted<span class="badge" id="wanted-badge" data-count="0"></span></button>
+      <button type="button" class="tab" data-tab="earnings">Earnings</button>
       <button type="button" class="tab" data-tab="stats">Stats</button>
     </div>
 
@@ -136,6 +139,16 @@
           </label>
         </div>
       </div>
+      <div class="card" id="pause-card">
+        <div class="toggle-row">
+          <div class="copy">
+            <strong id="pause-title">Open for orders</strong>
+            <p id="pause-copy">Pause when closing early or on vacation — hides all your SKUs from the machine.</p>
+          </div>
+          <label class="switch shop"><input type="checkbox" id="pause-switch" /><span class="slider"></span></label>
+        </div>
+      </div>
+      <div id="verify-note"></div>
       <div id="job-list"></div>
     </section>
 
@@ -186,6 +199,20 @@
       <div id="inv-list"></div>
     </section>
 
+    <!-- WANTED -->
+    <section id="tab-wanted" class="hidden">
+      <div class="card">
+        <div class="step-label">Buyer demand · Wanted</div>
+        <p class="sub" style="margin-bottom:6px" id="wanted-sub">What buyers are following on their Radar — anonymous counts only, never names or contact info.</p>
+        <div id="wanted-body" class="empty">Loading…</div>
+      </div>
+    </section>
+
+    <!-- EARNINGS -->
+    <section id="tab-earnings" class="hidden">
+      <div id="earn-body" class="empty">Loading…</div>
+    </section>
+
     <!-- WINDOWS -->
     <section id="tab-windows" class="hidden">
       <div class="card">
@@ -217,6 +244,7 @@
     </p>
   </div>
   <script src="/js/api.js"></script>
+  <script src="/js/extras.js"></script>
   <script src="/js/session.js"></script>
   <script src="/js/box-composite.js"></script>
   <script src="/js/shop.js"></script>
