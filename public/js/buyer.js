@@ -463,7 +463,7 @@ function renderPaid(order) {
   } else if (order.status === 'DELIVERED_ACCEPTED') {
     pulse.textContent = 'Accepted — done';
   } else if (order.status === 'REFUSED_SEAL') {
-    pulse.textContent = 'Refused seal / tote-bag QR — full refund stub';
+    pulse.textContent = 'Refused at the door — full refund issued';
   } else {
     pulse.textContent = `Status: ${order.status}`;
   }

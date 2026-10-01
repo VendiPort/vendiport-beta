@@ -67,18 +67,22 @@ function render(order) {
       <div class="panel">
         <div class="panel-label">Sealed tote bag</div>
         <p style="font-size:13px;color:var(--muted);margin:0;line-height:1.4">
-          Confirm the bag is intact (tear strip not pulled, seal not lifted). Then scan or upload a photo of the
+          Look at the bag first. <strong>Do not accept if the bag looks tampered.</strong> Then scan or upload a photo of the
           <strong>QR printed on your tote bag</strong> — it must match the tote QR from the shop’s pack photo
           (last-4 ${order.last4}). That photo goes to the shop as drop-off proof.
         </p>
       </div>
 
       <div id="actions"></div>
+      <div class="panel accept-rule" style="margin-top:10px"><div class="panel-label">Before you accept</div>
+        <p style="font-size:12px;color:var(--muted);margin:0;line-height:1.45">${VPX.ACCEPT_RULE}</p></div>
+      <div id="evidence-host"></div>
     </div>
     <p class="footer-note">Keep tote secured until tote-bag QR accept.</p>
   `;
 
   const actions = qs('#actions');
+  if (VPX.renderEvidence) VPX.renderEvidence(qs('#evidence-host'), order);
 
   if (done) {
     if (order.status === 'DELIVERED_ACCEPTED') {
@@ -92,7 +96,7 @@ function render(order) {
           <a class="vp-btn purple block" style="display:block;text-align:center;text-decoration:none;margin-top:8px" href="/collection?order=${order.id}">▶ Add my box break (any social link)</a>
           <a class="vp-btn ghost block" style="display:block;text-align:center;text-decoration:none;margin-top:8px" href="/collection">▣ My Collection</a></div>`;
     } else if (order.status === 'REFUSED_SEAL') {
-      actions.innerHTML = '<div class="banner warn">Refused (seal / tote-bag QR fail) — full refund stub. Return tote to shop.</div>';
+      actions.innerHTML = `<div class="banner warn">Refused — bag looked tampered. Full refund issued. Return the tote to the courier/shop.</div>${order.claim ? `<div class="panel" style="margin-top:10px"><div class="panel-label">Your report</div><p class="vp-hint" style="margin:0">VendiPort keeps the report with the photos and scan records for this order. <a href="/track/${order.id}">View order status</a></p></div>` : ''}`;
     } else {
       actions.innerHTML = '<div class="banner warn">Order cancelled.</div>';
     }
@@ -100,7 +104,7 @@ function render(order) {
   }
 
   if (order.disputeOpen) {
-    actions.innerHTML = `<div class="banner warn">Seal dispute open — you reported the seal as not intact. VendiPort is reviewing the shop’s sealed-box photo and yours. You won’t be charged until it’s resolved.</div>
+    actions.innerHTML = `<div class="banner warn">Report open — VendiPort is reviewing the records for this order. <a href="/track/${order.id}">View order status</a></div>
       <div class="panel" style="margin-top:10px"><div class="panel-label">What happens next</div><p class="vp-hint" style="margin:0">1. We compare photos &amp; timestamps · 2. You get a refund or a replacement · 3. You’ll see the result in your order status. Keep the tote and don’t open it.</p>
       <a class="vp-btn ghost block" style="display:block;text-align:center;text-decoration:none;margin-top:10px" href="/track/${order.id}">View order status</a></div>`;
     return;
@@ -183,20 +187,27 @@ function render(order) {
     if (f) scanImageFile(order, f);
   });
 
+  const acceptNote = document.createElement('div');
+  acceptNote.className = 'banner warn';
+  acceptNote.style.marginTop = '12px';
+  acceptNote.innerHTML = '<b>Do not accept if the bag looks tampered.</b> By accepting, you acknowledge receipt of the order in sealed condition and that the sale is final.';
+  actions.appendChild(acceptNote);
   const refuse = document.createElement('button');
   refuse.type = 'button';
   refuse.className = 'ho-big refuse';
   refuse.style.marginTop = '12px';
-  refuse.textContent = 'REFUSE — SEAL / TOTE-BAG QR FAIL · FULL REFUND';
-  refuse.addEventListener('click', () => {
-    stopScanner();
-    doAction(order.id, 'refuse');
-  });
+  refuse.textContent = 'BAG LOOKS TAMPERED — DON’T ACCEPT';
+  refuse.addEventListener('click', () => { stopScanner(); openRefuseSheet(order); });
   actions.appendChild(refuse);
+  const refuseSub = document.createElement('p');
+  refuseSub.className = 'vp-hint';
+  refuseSub.style.textAlign = 'center';
+  refuseSub.textContent = 'Refuse / Report — full refund. Your note and photo are optional.';
+  actions.appendChild(refuseSub);
 
   const locked = document.createElement('div');
   locked.className = 'ho-locked';
-  locked.textContent = 'Cancel closed after pickup · Accept only via tote-bag QR match';
+  locked.textContent = 'Cancel closed after pickup · Accept happens when the tote-bag QR matches';
   actions.appendChild(locked);
 }
 
@@ -352,38 +363,42 @@ async function acceptWithQr(order, payload, confirmImage) {
     toast(msg);
     return;
   }
-  if (status) status.textContent = 'QR captured — one quick check before you accept…';
-  askSealCheck(order, payload, confirmImage);
+  if (status) status.textContent = 'QR captured — accepting…';
+  await submitAccept(order, payload, confirmImage);
 }
 
-/** Seal check at handoff: "Was the seal intact?" must be answered before Accept. "No" routes to a dispute. */
-function askSealCheck(order, payload, confirmImage) {
-  const body = VPX.openSheet('Seal check', 'Check that the bag is still sealed before you accept', `
+/** Refuse / Report: the bag looks tampered. Full refund + a dispute record (optional note and photo). */
+function openRefuseSheet(order) {
+  const body = VPX.openSheet('Bag looks tampered', 'Refuse the delivery — you are refunded in full', `
     <div class="vp-seal-q">
-      <div style="font-size:42px">🛡️</div>
-      <div class="big">Was the seal intact?</div>
-      <p class="vp-hint" style="margin:0">Tear strip not pulled · seal not lifted · bag not opened. Saying <b>No</b> opens a dispute — VendiPort reviews it with the shop’s sealed-box photo. You won’t be charged until it’s resolved.</p>
-      <div class="two"><button type="button" class="vp-btn" id="seal-yes">Yes — intact<br><small>Accept</small></button><button type="button" class="vp-btn red" id="seal-no">No — tampered<br><small>Report</small></button></div>
-      <div id="seal-note-wrap" class="hidden" style="text-align:left;margin-top:12px"><label class="vp-lbl">What did you see? (optional)</label><textarea class="vp-textarea" id="seal-note" placeholder="Tear strip pulled, seal lifted…"></textarea><button type="button" class="vp-btn red block" id="seal-send" style="margin-top:8px">Open dispute</button></div>
+      <div style="font-size:38px">🛡️</div>
+      <p class="vp-hint" style="margin:0">If the tear strip is pulled, the seal is lifted, or the bag looks opened, do not accept it. Choose <b>Refuse / Report</b> and you’ll be refunded in full. VendiPort keeps your report with the photos and scan records for this order.</p>
+      <div style="text-align:left;margin-top:12px"><label class="vp-lbl">What did you see? (optional)</label><textarea class="vp-textarea" id="rf-note" placeholder="Tear strip pulled, seal lifted…"></textarea>
+      <label class="vp-lbl" style="margin-top:8px">Photo (optional)</label><input type="file" id="rf-file" accept="image/*" capture="environment" class="vp-input" />
+      <button type="button" class="vp-btn red block" id="rf-go" style="margin-top:10px">Refuse / Report — full refund</button>
+      <button type="button" class="vp-btn ghost block" id="rf-x" style="margin-top:6px">Cancel</button></div>
     </div>`);
-  body.querySelector('#seal-yes').addEventListener('click', () => submitAccept(order, payload, confirmImage, true));
-  body.querySelector('#seal-no').addEventListener('click', () => { body.querySelector('#seal-note-wrap').classList.remove('hidden'); });
-  body.querySelector('#seal-send').addEventListener('click', () => submitAccept(order, payload, confirmImage, false, body.querySelector('#seal-note').value));
+  body.querySelector('#rf-x').addEventListener('click', () => VPX.closeSheet());
+  body.querySelector('#rf-go').addEventListener('click', async () => {
+    const f = body.querySelector('#rf-file').files && body.querySelector('#rf-file').files[0];
+    const photo = f ? await fileToDataUrl(f) : null;
+    try {
+      const r = await api(`/api/orders/${order.id}/refuse`, { method: 'POST', body: JSON.stringify({ note: body.querySelector('#rf-note').value, photo }) });
+      VPX.closeSheet(); toast('Refused — full refund issued'); render(r.order);
+    } catch (e) { toast(e.message); }
+  });
 }
 
-async function submitAccept(order, payload, confirmImage, intact, note) {
+async function submitAccept(order, payload, confirmImage) {
   const status = qs('#qr-status');
   try {
     const r = await api(`/api/orders/${order.id}/accept`, {
       method: 'POST',
-      body: JSON.stringify({ qrPayload: payload, confirmImage, sealIntact: intact, note: note || '' }),
+      body: JSON.stringify({ qrPayload: payload, confirmImage }),
     });
-    VPX.closeSheet();
-    if (r.disputed) { toast('Dispute opened — VendiPort will review'); render(r.order); return; }
-    toast('Seal intact · tote QR matched — accepted');
+    toast('Tote QR matched — accepted');
     render(r.order);
   } catch (err) {
-    VPX.closeSheet();
     if (status) status.textContent = err.message;
     toast(err.message);
   }
@@ -405,7 +420,7 @@ async function tapScanStub(order) {
 async function doAction(id, action) {
   try {
     const { order } = await api(`/api/orders/${id}/${action}`, { method: 'POST', body: '{}' });
-    toast(action === 'refuse' ? 'Full refund stub' : 'Updated');
+    toast('Updated');
     render(order);
   } catch (err) {
     toast(err.message);

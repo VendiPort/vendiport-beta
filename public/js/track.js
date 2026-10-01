@@ -33,7 +33,7 @@ function pulseText(order) {
       : 'Out for delivery…';
   }
   if (st === 'DELIVERED_ACCEPTED') return 'Accepted — sale final (tote QR matched)';
-  if (st === 'REFUSED_SEAL') return 'Refused seal / tote QR — full refund stub';
+  if (st === 'REFUSED_SEAL') return 'Refused at the door — full refund issued';
   if (st === 'CANCELLED') return 'Cancelled';
   return `Status: ${st}`;
 }
@@ -75,7 +75,7 @@ function codePanelHtml(order) {
   if (order.status !== 'PICKED_UP' || !order.deliveryCode) return '';
   return `<div class="panel"><div class="panel-label">Delivery code</div>
     <div class="vp-code"><div class="cap">Read this to the courier</div><div class="num">${escapeHtml(order.deliveryCode)}</div></div>
-    <p class="vp-hint" style="margin:0">The courier enters this code (or snaps photo proof) at the door. Then you do the seal check on the <a href="${escapeHtml(order.handoffUrl || '#')}">handoff page</a>.</p>
+    <p class="vp-hint" style="margin:0">The courier enters this code (or snaps photo proof) at the door. Then inspect the bag on the <a href="${escapeHtml(order.handoffUrl || '#')}">handoff page</a>.</p>
     ${order.proofType ? `<p class="vp-hint" style="color:#7fe6dc">✓ Handoff proof recorded (${order.proofType === 'code' ? 'delivery code' : 'photo'}).</p>` : `<div class="vp-row" style="margin-top:10px"><input class="vp-input" id="proof-code" inputmode="numeric" maxlength="4" placeholder="Courier: enter code" /><button type="button" class="vp-btn" id="proof-go">Verify</button></div>
     <button type="button" class="vp-btn ghost block sm" id="proof-photo" style="margin-top:8px">📷 Photo proof instead (stub)</button><input type="file" id="proof-file" accept="image/*" capture="environment" class="hidden" />`}
   </div>`;
@@ -176,7 +176,7 @@ async function ensureCatalog() {
 function changeOrderHtml(order) {
   if (!(order.canAddItems || order.cancelAllowed)) {
     if (order.salesFinal) {
-      return `<div class="panel alert"><p style="font-size:13px;margin:0;line-height:1.45">This order can’t be changed or canceled — the courier has picked it up. All sales final except if the seal or tote QR fails at delivery.</p></div>`;
+      return `<div class="panel alert"><p style="font-size:13px;margin:0;line-height:1.45">This order can’t be changed or canceled — the courier has picked it up. ${VPX.ACCEPT_RULE}</p></div>`;
     }
     return '';
   }
@@ -280,6 +280,8 @@ function renderTrack(order) {
       </div>
 
       <div class="panel" id="tl-panel"></div>
+      <div id="claim-host"></div>
+      <div id="evidence-host"></div>
       ${codePanelHtml(order)}
       ${ratingHtml(order)}
       ${linesHtml(order)}
@@ -300,12 +302,15 @@ function renderTrack(order) {
           When the tote arrives, open handoff and scan or upload the <strong>QR printed on your tote bag</strong>.
         </p>
         <a class="handoff-link-box" href="${escapeHtml(order.handoffUrl || '#')}">${escapeHtml(handoff)}</a>
+        <p class="vp-hint" style="margin:8px 0 0">${VPX.ACCEPT_RULE}</p>
       </div>
 
     </div>
   `;
 
   VPX.renderTimeline(qs('#tl-panel'), order);
+  VPX.renderClaim(qs('#claim-host'), order, renderTrack);
+  VPX.renderEvidence(qs('#evidence-host'), order);
   wireRating(order);
   wireCancelQuick(order);
   const changeBtn = qs('#track-change-order');
