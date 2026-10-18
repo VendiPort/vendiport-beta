@@ -232,7 +232,11 @@ const VIEWS = {
   async health(v) {
     const R = OV.product.real, M = OV.product.demo;
     const fun = (f, tag) => { const top = Math.max(1, f.browse); return ['browse', 'select', 'checkout', 'paid'].map((k, i, a) => `<div class="barrow"><span style="text-transform:capitalize">${k}</span>${bar((f[k] / top) * 100)}<span>${f[k]}${i ? ' · ' + (a[i - 1] && f[a[i - 1]] ? Math.round((f[k] / f[a[i - 1]]) * 100) : 0) + '%' : ''}</span></div>`).join(''); };
+    const MS = OV.product.msrp || { flagged: [], checked: 0 };
+    const msrpCard = `<div class="card sec"><h2>Price vs MSRP flags</h2><p class="note">Flags any SKU priced more than +${MS.threshold || 25}% above its reference MSRP. Reference prices are demo values, not live market data.</p>
+      ${MS.flagged.length ? table(['SKU', 'Price', 'Ref. MSRP', 'Over'], MS.flagged.map((f) => [esc(f.title) + (f.hidden ? ' <span class="muted">(hidden)</span>' : ''), usd(f.price), usd(f.msrp), '<span class="tag red">⚑ +' + Math.round(f.pct) + '%</span>'])) : '<p class="note">No SKUs above +25% of MSRP (' + MS.checked + ' checked).</p>'}</div>`;
     v.innerHTML = `
+      ${msrpCard}
       <div class="grid2">
         <div class="card sec"><h2>Funnel — Browse › Select › Checkout › Paid ${REAL}</h2>${fun(R.funnel)}<p class="note">Counts since the last reset; % is step-to-step.</p></div>
         <div class="card sec"><h2>Funnel ${DEMO}</h2>${fun(M.funnel)}</div>
@@ -254,7 +258,7 @@ const VIEWS = {
     const cmp = (d) => {
       const e = d.evidence || {}; const ph = (x, label, sub) => `<figure>${x && x.photo ? `<a href="${esc(x.photo)}" target="_blank" rel="noopener"><img src="${esc(x.photo)}" alt="${esc(label)}" /></a>` : `<div class="ph-none">${x && x.stub ? 'stub photo' : 'no photo'}</div>`}<figcaption><b>${esc(label)}</b><br>${esc(sub)}${x && x.at ? '<br>' + esc(fmt(x.at)) : ''}</figcaption></figure>`;
       const door = e.door || {}; const doorP = door.reportPhoto || door.photo;
-      return `<div class="cmp">${ph(e.before, '1 · Before sealing', 'product on the bag QR')}${ph(e.after, '2 · Sealed bag', 'QR-in-V + seal strip')}${ph(doorP ? { photo: doorP, at: door.qrScannedAt || door.proofAt } : null, '3 · At the door', 'buyer / handoff photo')}</div>
+      return `<div class="cmp">${ph(e.wrap, '0 · Factory wrap', 'product in original shrink-wrap')}${ph(e.before, '1 · Before sealing', 'product on the bag QR')}${ph(e.after, '2 · Sealed bag', 'QR-in-V + seal strip')}${ph(doorP ? { photo: doorP, at: door.qrScannedAt || door.proofAt } : null, '3 · At the door', 'buyer / handoff photo')}</div>
         <p class="note" style="margin:4px 0">QR chain: ${d.qrChain && d.qrChain.shopQrMatch ? '<span class="tag teal">Photo 1 = Photo 2</span>' : '<span class="tag red">shop QRs differ / missing</span>'} ${door.qrMatched ? '<span class="tag teal">door scan matched</span>' : '<span class="tag gray">no door scan</span>'}${door.qrScanPhoto ? ` · <a href="${esc(door.qrScanPhoto)}" target="_blank" rel="noopener">door QR scan photo ↗</a>` : ''}</p>`;
     };
     const hist = (h) => `<div class="grid3">
@@ -263,7 +267,7 @@ const VIEWS = {
       <div class="mini"><b>Driver</b> ${esc(h.driver.label)} ${h.driver.repeat ? '<span class="tag red">repeat driver</span>' : ''}<br>${h.driver.d30} claim(s) / 30 days · ${h.driver.faults} at fault</div></div>`;
     const logT = (d) => (d.log || []).length ? `<div class="resl"><b>Resolution log</b>${d.log.map((l) => `<div>${esc(fmt(l.at))} · ${esc(l.by)} · <b>${esc(l.outcome)}</b>${l.fault ? ' · fault: ' + esc(l.fault) : ''}${l.amount ? ' · ' + usd(l.amount) : ''}${l.charged ? ' · charged shop ' + usd(l.charged) : ''}${l.absorbed ? ' · absorbed ' + usd(l.absorbed) : ''}${l.strikes ? ' · buyer strikes ' + l.strikes : ''}${l.note ? ' · “' + esc(l.note) + '”' : ''}</div>`).join('')}</div>` : '';
     v.innerHTML = `<div class="kpis">${kpi(act.length, 'Active claims', act.length ? 'warn' : '')}${kpi(disputes.filter((d) => d.status === 'awaiting_proof').length, 'Awaiting proof', 'gold')}${kpi(disputes.filter((d) => d.status === 'denied').length, 'Claim denied')}${kpi(disputes.filter((d) => d.status === 'resolved').length, 'Resolved')}</div>
-      <p class="note" style="margin-bottom:10px">Compare the three photos, check the timeline hints and claim history, then act. The recommendation is a suggestion — the decision is yours.</p>` +
+      <p class="note" style="margin-bottom:10px">Compare the shop’s factory-wrap, before and sealed photos with the door photo, check the timeline hints and claim history, then act. The recommendation is a suggestion — the decision is yours.</p>` +
       (disputes.map((d) => `
       <div class="card sec" data-id="${esc(d.id)}">
         <div class="row-between"><div><strong>#${esc(d.last4)}</strong> ${esc(d.productTitle || '')} <span class="tag ${d.status === 'open' ? 'red' : d.status === 'awaiting_proof' ? 'gold' : d.status === 'denied' ? 'gray' : 'teal'}">${esc(d.statusLabel)}</span> ${d.demo ? DEMO : REAL} ${d.channel === 'claim_after_accept' ? '<span class="tag gray">after acceptance</span>' : '<span class="tag teal">refused at door</span>'}</div><span class="mono">${esc(d.shopName || '')} · ${usd(d.total)}</span></div>

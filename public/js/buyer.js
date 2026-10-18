@@ -119,6 +119,7 @@ function renderBrowse(quiet) {
       </div>
       <div class="slot-title">${escapeHtml(p.title)}</div>
       <div class="slot-price">${money(p.price)}</div>
+      ${VPX.msrpBadge ? VPX.msrpBadge(p) : ''}
       <button type="button" class="push-tab" aria-label="Select ${escapeHtml(p.title)}">
         Get it<span class="hint">Push</span>
       </button>`;
@@ -307,7 +308,7 @@ function renderCheckout() {
   applyGalaxyComposites(qs('#co-visual'));
   qs('#co-title').textContent = p.title;
   qs('#co-sub').textContent = p.subtitle || '';
-  qs('#co-order').textContent = money(t.product);
+  qs('#co-order').innerHTML = money(t.product) + (VPX.msrpBadge ? ' ' + VPX.msrpBadge(selected.product) : '');
   qs('#co-delivery').textContent = money(t.delivery);
   qs('#co-due').textContent = money(t.total);
   qs('#co-total-btn').textContent = `Pay ${money(t.total)}`;

@@ -64,8 +64,21 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     ok(o.smsLog.some((s) => s.kind === 'order_paid' && s.simulated), 'simulated text logged for Paid');
     ok(!JSON.stringify(o.smsLog).includes('4155550123'), 'phone number is masked in log');
     const id = o.id;
-    await call('POST', `/api/orders/${id}/start-pack`);
+    r = await call('POST', `/api/orders/${id}/start-pack`);
+    ok(r.status === 409 && /Photo 0/.test(r.json.error), 'start-pack blocked without Photo 0 (factory wrap)');
+    r = await call('POST', `/api/orders/${id}/pack-photo`, { packImage: PNG, toteQrPayload: 'VENDIPORT:ORDER:' + id });
+    ok(r.status === 409 && /Photo 0/.test(r.json.error), 'Photo 1 blocked without Photo 0');
+    r = await call('POST', `/api/orders/${id}/pack-checklist`, { checks: { item: true } });
+    ok(r.status === 409 && /Photo 0/.test(r.json.error), 'packing checklist cannot move PAID to PACKING without Photo 0');
     r = await call('GET', '/api/orders/' + id);
+    ok(r.json.order.status === 'PAID', 'order still PAID without the factory-wrap photo');
+    r = await call('POST', `/api/orders/${id}/pack-wrap`, {});
+    ok(r.status === 400, 'Photo 0 needs an image');
+    r = await call('POST', `/api/orders/${id}/pack-wrap`, { photo: PNG });
+    ok(r.status === 200 && r.json.order.packWrapDone && r.json.order.status === 'PAID', 'Photo 0 (factory wrap) saved; order still PAID until Photo 1');
+    r = await call('POST', `/api/orders/${id}/start-pack`);
+    r = await call('GET', '/api/orders/' + id);
+    ok(r.json.order.timeline.some((t) => t.key === 'wrap'), 'timeline has the factory-wrap step');
     ok(r.json.order.timeline.some((t) => t.key === 'packing'), 'timeline has Packing');
 
     console.log('Two-photo pack flow: Photo 1 starts packing, Photo 2 => READY + delivery call');
@@ -92,11 +105,13 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     ok(['paid', 'packing', 'ready', 'out', 'dispatch'].every((k) => o.timeline.some((t) => t.key === k)), 'timeline: Paid/Packing/Ready/Out + dispatch event');
     ok(o.smsLog.length >= 4, 'simulated text log has the status updates');
     ok(o.evidence.before && o.evidence.after && o.evidence.qrChain.shopQrMatch, 'Evidence record: Photo 1 + Photo 2 tied to the same QR scan');
+    ok(o.evidence.wrap && o.evidence.wrap.photo, 'Evidence record: Photo 0 (factory wrap) is part of the before/wrap/sealed set');
 
     // courier shop (own-driver OFF) => automatic dispatch request
     await call('PATCH', '/api/shops/shop_demo_01', { ownDriver: false, customWindows: false });
     r = await call('POST', '/api/orders', { productId: prod.id, windowId: await freshWin(), buyerId: 'buyer-smoke-9', pay: true });
     const kid = r.json.order.id;
+    await call('POST', `/api/orders/${kid}/pack-wrap`, { photo: PNG });
     await call('POST', `/api/orders/${kid}/start-pack`);
     await call('POST', `/api/orders/${kid}/pack-photo`, { packImage: PNG, toteQrPayload: 'VENDIPORT:ORDER:' + kid });
     r = await call('POST', `/api/orders/${kid}/pack-sealed`, { photo: PNG, checks: CHK });
@@ -121,6 +136,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     // refuse / report on a second order
     r = await call('POST', '/api/orders', { productId: prod.id, windowId: await freshWin(), buyerId: 'buyer-smoke-2', pay: true });
     const rid = r.json.order.id;
+    await call('POST', `/api/orders/${rid}/pack-wrap`, { photo: PNG });
     await call('POST', `/api/orders/${rid}/start-pack`);
     await call('POST', `/api/orders/${rid}/pack-photo`, { packImage: PNG, toteQrPayload: 'VENDIPORT:ORDER:' + rid });
     await call('POST', `/api/orders/${rid}/pack-sealed`, { photo: PNG, checks: CHK });
@@ -130,6 +146,8 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     r = await call('GET', '/api/admin/disputes', null, A);
     const dp = r.json.disputes.find((d) => d.orderId === rid);
     ok(dp && dp.channel === 'refused_at_door' && dp.photos.some((p) => /Photo 1/.test(p.label)) && dp.photos.some((p) => /Photo 2/.test(p.label)) && dp.photos.some((p) => /Buyer door/.test(p.label)), 'admin dispute: before / after-sealed / at-door comparison photos');
+    ok(dp.photos.some((p) => /Photo 0/.test(p.label)) && dp.evidence.wrap && dp.timeline.some((t) => /Photo 0/.test(t.label)), 'admin dispute: factory-wrap photo shown and in the timeline');
+    ok(dp.hints.some((h) => h.tone === 'good' && /Stronger record/.test(h.text)), 'factory wrap + matching before/sealed photos => stronger-evidence hint');
     ok(dp.timeline.length >= 5 && dp.hints.length >= 2 && dp.history.buyer.d30 >= 1, 'admin dispute: timeline, credibility hints, buyer claim history');
     ok(['refund', 'proof', 'deny', 'close'].includes(dp.recommendation.action) && dp.recommendation.reason.length > 10, 'recommended action + one-line reason computed');
     r = await call('POST', `/api/admin/disputes/${dp.id}/resolve`, { action: 'deny' }, A);
@@ -168,6 +186,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     // (d) charge-to-shop payout adjustment
     r = await call('POST', '/api/orders', { productId: prod.id, windowId: await freshWin(), buyerId: 'buyer-smoke-3', pay: true });
     const sid = r.json.order.id;
+    await call('POST', `/api/orders/${sid}/pack-wrap`, { photo: PNG });
     await call('POST', `/api/orders/${sid}/start-pack`);
     await call('POST', `/api/orders/${sid}/pack-photo`, { packImage: PNG, toteQrPayload: 'VENDIPORT:ORDER:' + sid });
     await call('POST', `/api/orders/${sid}/pack-sealed`, { photo: PNG, checks: CHK });
@@ -184,6 +203,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     // (e) delivery fault is absorbed + logged against the driver
     r = await call('POST', '/api/orders', { productId: prod.id, windowId: await freshWin(), buyerId: 'buyer-smoke-4', pay: true });
     const vid = r.json.order.id;
+    await call('POST', `/api/orders/${vid}/pack-wrap`, { photo: PNG });
     await call('POST', `/api/orders/${vid}/start-pack`);
     await call('POST', `/api/orders/${vid}/pack-photo`, { packImage: PNG, toteQrPayload: 'VENDIPORT:ORDER:' + vid });
     await call('POST', `/api/orders/${vid}/pack-sealed`, { photo: PNG, checks: CHK });
@@ -198,6 +218,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     const mk = async () => {
       r = await call('POST', '/api/orders', { productId: prod.id, windowId: await freshWin(), buyerId: fb, pay: true });
       const oid = r.json.order.id;
+      await call('POST', `/api/orders/${oid}/pack-wrap`, { photo: PNG });
       await call('POST', `/api/orders/${oid}/start-pack`);
       await call('POST', `/api/orders/${oid}/pack-photo`, { packImage: PNG, toteQrPayload: 'VENDIPORT:ORDER:' + oid });
       await call('POST', `/api/orders/${oid}/pack-sealed`, { photo: PNG, checks: CHK });
@@ -360,6 +381,22 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     const pend = r.json.verification.find((v) => v.status === 'pending');
     r = await call('POST', `/api/admin/verification/${pend.id}/approve`, {}, A);
     ok(r.json.verification.status === 'approved', 'shop approval screen: approve');
+
+    console.log('Fair-price badge (demo reference MSRP) + factory-sealed rules');
+    r = await call('GET', '/api/products?scope=shop');
+    const byId = Object.fromEntries(r.json.products.map((p) => [p.id, p]));
+    ok(byId['2022-panini-score-football'].msrpBadge.label === 'At MSRP', 'badge: At MSRP');
+    ok(/^Fair: within 15% of MSRP$/.test(byId['2021-panini-score-football'].msrpBadge.label), 'badge: Fair within 15% of MSRP');
+    ok(/^Above MSRP \+\d+%$/.test(byId['2022-panini-absolute-football'].msrpBadge.label) || byId['2022-panini-absolute-football'].msrpBadge.tone === 'warn', 'badge: Above MSRP +X%');
+    ok(/demo reference price/i.test(byId['2022-panini-mosaic-football'].msrpBadge.tooltip) && /not live market data/i.test(byId['2022-panini-mosaic-football'].msrpBadge.tooltip), 'badge tooltip labels source as demo reference price');
+    r = await call('GET', '/api/products?scope=shop');
+    ok(r.json.products.some((p) => p.msrp > 0 && p.msrpBadge), 'shop inventory payload carries price-vs-MSRP');
+    r = await call('GET', '/api/admin/overview', null, A);
+    const fl = r.json.product.msrp.flagged;
+    ok(fl.some((f) => f.id === '2022-panini-mosaic-football' && f.pct > 25) && !fl.some((f) => f.pct <= 25), 'admin Product health flags only items above +25% MSRP');
+    for (const f of ['/js/shop.js', '/js/extras.js', '/js/admin.js']) { r = await call('GET', f); ok(r.status === 200, 'asset ' + f); }
+    r = await call('GET', '/js/shop.js');
+    ok(/factory-sealed product/.test(r.text) && /mystery packs/.test(r.text), 'shop onboarding terms: factory-sealed only, no repacked/mystery packs');
 
     console.log('Static pages');
     for (const p of ['/', '/shop', '/account', '/admin', '/collection', '/radar', '/breaks', '/track/x', '/handoff/x']) {

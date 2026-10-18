@@ -403,11 +403,12 @@ function jobCard(o) {
     ${o.amended && ['PAID','PACKING','READY'].includes(o.status)
       ? '<div class="banner paid" style="margin-top:10px">Order updated — pull added items</div>'
       : ''}
-    ${o.status === 'PAID' && !o.amended ? '<div class="banner paid" style="margin-top:10px">NEW SALE — pull it. Start pack → pack photo with tote QR.</div>' : ''}
+    ${o.status === 'PAID' && !o.amended ? '<div class="banner paid" style="margin-top:10px">NEW SALE — pull it. Photo 0 (factory wrap) → Photo 1 (on the bag QR).</div>' : ''}
     ${o.status === 'PAID' && o.amended ? '<div class="banner paid" style="margin-top:8px">NEW SALE — pull all line items → pack photo with tote QR.</div>' : ''}
     <div class="panel" style="margin-top:10px">
-      <div class="panel-label">Pack · two photos tied to the bag QR</div>
+      <div class="panel-label">Pack · three photos: factory wrap, before sealing, sealed bag</div>
       <p style="font-size:12px;color:var(--muted);margin:0 0 6px;line-height:1.45">
+        <strong>Photo 0 — factory wrap (required first):</strong> the product still in its original factory shrink-wrap/seal, before it goes in the bag. Packing can’t start without it. List and pack factory-sealed product only — no shop-built, repacked or mystery packs.<br>
         <strong>Photo 1 — before sealing:</strong> product placed on/over the bag’s QR, QR visible. This is the original scan: it starts packing and links the bag QR to this order (last-4 <strong>${o.last4}</strong>).<br>
         <strong>Photo 2 — after sealing:</strong> press the Mylar bag shut; the sealed bag with the <strong>QR-in-V and peel-and-seal strip visible</strong>. This marks the order <strong>READY</strong> and automatically calls delivery (own-driver shops are notified instead).
       </p>
@@ -490,7 +491,14 @@ function jobCard(o) {
   }
   const actions = el.querySelector('.job-actions');
   // Locked stream: PAID alert → Start pack ONLY (no pack/ready until PACKING)
-  if (o.status === 'PAID') {
+  if (o.status === 'PAID' || (o.status === 'PACKING' && !o.packWrapDone && !o.packAfterDone)) {
+    const w = document.createElement('div'); w.className = 'mono';
+    w.textContent = `Photo 0 ${o.packWrapDone ? '✓ factory wrap on file' : '— required first (product still in its factory wrap)'}`;
+    actions.appendChild(w);
+    actions.appendChild(btn(o.packWrapDone ? 'Reshoot Photo 0 — factory wrap' : '📷 Photo 0 — factory wrap (required first)', o.packWrapDone ? 'btn-ghost' : 'btn-red', () => captureWrapPhoto(o)));
+    actions.appendChild(btn('Demo stub Photo 0 (no camera)', 'btn-ghost', () => act(o.id, 'pack-wrap', { stub: true })));
+  }
+  if (o.status === 'PAID' && o.packWrapDone) {
     actions.appendChild(btn('📷 Photo 1 — product on the bag QR (starts packing)', 'btn-red', () => capturePackPhoto(o)));
     actions.appendChild(btn('Demo stub (no camera)', 'btn-ghost', () => act(o.id, 'pack-photo')));
   }
@@ -500,7 +508,7 @@ function jobCard(o) {
     const allChecked = (o.checklistItems || []).every((i) => ck[i.id]);
     const st = document.createElement('div');
     st.className = 'mono';
-    st.innerHTML = `Photo 1 ${o.packBeforeDone || o.packPhotoStub ? '✓' : '—'} · Photo 2 ${o.packAfterDone ? '✓' : 'next'}`;
+    st.innerHTML = `Photo 0 ${o.packWrapDone ? '✓' : '—'} · Photo 1 ${o.packBeforeDone || o.packPhotoStub ? '✓' : '—'} · Photo 2 ${o.packAfterDone ? '✓' : 'next'}`;
     actions.appendChild(st);
     actions.appendChild(btn('Reshoot Photo 1', 'btn-ghost', () => capturePackPhoto(o)));
     actions.appendChild(btn('📷 Photo 2 — sealed bag, QR-in-V + strip visible → READY + call delivery', allChecked ? 'btn-teal' : 'btn-ghost', () => captureSealedPhoto(o)));
@@ -554,13 +562,30 @@ function packChecklistEl(o) {
   d.innerHTML = `<div class="panel-label" style="margin-bottom:6px">Packing checklist · tick all, then take Photo 2</div>
     ${items.map((i) => `<label class="vp-check"><input type="checkbox" data-c="${i.id}" ${cur[i.id] ? 'checked' : ''}/> <span>${escapeHtml(i.label)}</span></label>`).join('')}
     <div class="vp-row" style="margin-top:8px"><button type="button" class="vp-btn sm" data-a="save">Save checklist</button></div>
-    <p class="vp-hint" style="margin:6px 0 0">${o.packAfterDone ? '<b style="color:#7fe6dc">✓ Both photos on record.</b>' : `Photo 1 ${o.packBeforeDone || o.packPhotoStub ? '✓ done' : 'first'} · Photo 2 (sealed bag) needs every box ticked. (Photo storage is a stub in beta.)`}</p>`;
+    <p class="vp-hint" style="margin:6px 0 0">${o.packAfterDone ? '<b style="color:#7fe6dc">✓ All three photos on record.</b>' : `Photo 0 ${o.packWrapDone ? '✓ done' : 'first'} · Photo 1 ${o.packBeforeDone || o.packPhotoStub ? '✓ done' : 'next'} · Photo 2 (sealed bag) needs every box ticked. (Photo storage is a stub in beta.)`}</p>`;
   const checks = () => Object.fromEntries(items.map((i) => [i.id, d.querySelector(`[data-c="${i.id}"]`).checked]));
   d.querySelector('[data-a="save"]').addEventListener('click', async () => {
     try { await api(`/api/orders/${o.id}/pack-checklist`, { method: 'POST', body: JSON.stringify({ checks: checks() }) }); await refreshJobs(); toast('Checklist saved'); } catch (e) { toast(e.message); }
   });
   d.checks = checks;
   return d;
+}
+
+/** Photo 0: product still in its original factory shrink-wrap, before bagging. Required before Photo 1. */
+async function captureWrapPhoto(order) {
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = 'image/*'; input.capture = 'environment';
+  input.onchange = async () => {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    try {
+      const photo = await fileToDataUrlShop(file);
+      await api(`/api/orders/${order.id}/pack-wrap`, { method: 'POST', body: JSON.stringify({ photo }) });
+      toast('Photo 0 saved — factory wrap on record. Now Photo 1.');
+      await refreshJobs();
+    } catch (err) { toast(err.message || 'Photo 0 failed'); }
+  };
+  input.click();
 }
 
 /** Photo 2: sealed bag (QR-in-V + seal strip visible). Marks READY and triggers the delivery call. */
@@ -728,7 +753,7 @@ async function loadInventory() {
             <strong style="font-size:14px">${escapeHtml(p.title)}</strong>
             ${p.hidden ? '<span class="status-tag CANCELLED">HIDDEN</span>' : '<span class="status-tag READY">LIVE</span>'}
           </div>
-          <div class="mono">${escapeHtml(p.category)} · ${money(p.price)} · ${earliest ? earliest.units + ' @ ' + earliest.label : 'no window'}${p.barcode ? ' · barcode ' + escapeHtml(p.barcode) : ''}</div>
+          <div class="mono">${escapeHtml(p.category)} · ${money(p.price)}${p.msrp ? ` · <span class="msrp-col" title="${escapeHtml((p.msrpBadge || {}).tooltip || '')}">vs MSRP ${money(p.msrp)}: <b class="msrp-badge ${escapeHtml((p.msrpBadge || {}).tone || '')}">${escapeHtml((p.msrpBadge || {}).label || '')}</b></span>` : ' · vs MSRP: n/a'} · ${earliest ? earliest.units + ' @ ' + earliest.label : 'no window'}${p.barcode ? ' · barcode ' + escapeHtml(p.barcode) : ''}</div>
           <div style="margin-top:5px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
             ${p.stock && p.stock.soldOut ? '<span class="stock-out">⛔ 0 stock — auto-hidden from buyers</span>' : p.stock && p.stock.low ? `<span class="stock-low">⚠ Low stock · ${p.stock.total} left</span>` : `<span class="mono">${p.stock ? p.stock.total : ''} total units</span>`}
             ${p.wantedBuyers ? `<span class="want-badge" title="${escapeHtml((p.wantedLabels || []).join(' · '))}">★ Someone wants this · ${p.wantedBuyers} buyer${p.wantedBuyers > 1 ? 's' : ''}</span>` : ''}
@@ -1076,7 +1101,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ---------------- Pause switch (11) ----------------
 async function wirePause() {
-  const tt = qs('#shop-terms-text'); if (tt && window.VPX) tt.innerHTML = '<b>Two photos per order:</b> Photo 1 — product on the bag’s QR before sealing; Photo 2 — the sealed bag with QR-in-V and seal strip visible. Photo 2 marks the order READY and automatically calls delivery. ' + VPX.ACCEPT_RULE_SHOP;
+  const tt = qs('#shop-terms-text'); if (tt && window.VPX) tt.innerHTML = '<b>List only factory-sealed product.</b> Shop-built, repacked or mystery packs are not allowed on VendiPort. <b>Three photos per order:</b> Photo 0 — the product still in its original factory wrap, before bagging (required before packing starts); Photo 1 — product on the bag’s QR before sealing; Photo 2 — the sealed bag with QR-in-V and seal strip visible. Photo 2 marks the order READY and automatically calls delivery. ' + VPX.ACCEPT_RULE_SHOP;
   const sw = qs('#pause-switch');
   if (!sw) return;
   const paint = (st) => {

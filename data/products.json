@@ -50,7 +50,8 @@
         "potentialValue": 55
       }
     ],
-    "chaseDemo": true
+    "chaseDemo": true,
+    "msrp": 40
   },
   {
     "id": "2022-panini-score-football",
@@ -108,7 +109,8 @@
         "potentialValue": 55
       }
     ],
-    "chaseDemo": true
+    "chaseDemo": true,
+    "msrp": 40
   },
   {
     "id": "2022-panini-absolute-football",
@@ -166,7 +168,8 @@
         "potentialValue": 55
       }
     ],
-    "chaseDemo": true
+    "chaseDemo": true,
+    "msrp": 30
   },
   {
     "id": "2022-panini-mosaic-football",
@@ -219,7 +222,8 @@
         "potentialValue": 55
       }
     ],
-    "chaseDemo": true
+    "chaseDemo": true,
+    "msrp": 40
   },
   {
     "id": "2021-panini-contenders-football",
@@ -277,7 +281,8 @@
         "potentialValue": 75
       }
     ],
-    "chaseDemo": true
+    "chaseDemo": true,
+    "msrp": 35
   },
   {
     "id": "2022-panini-donruss-football",
@@ -335,7 +340,8 @@
         "potentialValue": 180
       }
     ],
-    "chaseDemo": true
+    "chaseDemo": true,
+    "msrp": 35
   },
   {
     "id": "2022-panini-donruss-optic-football",
@@ -388,7 +394,8 @@
         "potentialValue": 55
       }
     ],
-    "chaseDemo": true
+    "chaseDemo": true,
+    "msrp": 40
   },
   {
     "id": "2022-topps-chrome-baseball",
@@ -446,7 +453,8 @@
         "potentialValue": 95
       }
     ],
-    "chaseDemo": true
+    "chaseDemo": true,
+    "msrp": 45
   },
   {
     "id": "2023-topps-series-1-baseball",
@@ -504,7 +512,8 @@
         "potentialValue": 45
       }
     ],
-    "chaseDemo": true
+    "chaseDemo": true,
+    "msrp": 30
   },
   {
     "id": "2022-leaf-draft-baseball",
@@ -556,7 +565,8 @@
         "potentialValue": 35
       }
     ],
-    "chaseDemo": true
+    "chaseDemo": true,
+    "msrp": 30
   },
   {
     "id": "leaf-metal-legends-wrestling",
@@ -614,7 +624,8 @@
         "potentialValue": 45
       }
     ],
-    "chaseDemo": true
+    "chaseDemo": true,
+    "msrp": 45
   },
   {
     "id": "shop-upload-test-blaster-udtq",

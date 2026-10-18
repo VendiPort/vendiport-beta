@@ -186,3 +186,11 @@
 .accept-rule { border-color:rgba(255,216,74,.4); }
 .terms-note { font-size:11.5px; color:var(--muted); line-height:1.5; text-align:left; margin:0 0 10px; padding:8px 10px; border-radius:10px; border:1px solid rgba(255,216,74,.3); background:rgba(255,216,74,.05); }
 .terms-note b { color:#ffe08a; }
+
+/* fair-price badge (demo reference price) + 4-up evidence grid */
+.msrp-badge { display:inline-block; font-size:10px; line-height:1; padding:3px 7px; border-radius:999px; border:1px solid rgba(79,209,197,.45); color:#7fe6dc; background:rgba(79,209,197,.08); cursor:help; font-weight:600; white-space:nowrap; }
+.msrp-badge.warn { color:#ffd84a; border-color:rgba(255,216,74,.5); background:rgba(255,216,74,.08); }
+.msrp-badge.high { color:#ff8a8a; border-color:rgba(255,138,138,.55); background:rgba(255,138,138,.08); }
+.slot .msrp-badge { margin:2px 0 6px; }
+.vp-cmp { grid-template-columns:repeat(2,1fr); }
+@media (min-width:560px) { .vp-cmp { grid-template-columns:repeat(4,1fr); } }

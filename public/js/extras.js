@@ -50,7 +50,7 @@
       ['✉️', 'Text updates', 'Opt in at checkout for Paid → Packing → Ready → Out messages. Beta texts are simulated and shown in-app.'],
       ['🔢', 'Delivery code', 'A 4-digit code appears on your order once it’s out. Read it to the courier — or they snap photo proof.'],
       ['🛡️', 'Accepting at the door', 'Inspect your sealed bag first. If the tear strip is pulled, the seal is lifted, or the bag looks opened, do not accept — tap <b>Refuse / Report</b> for a full refund. By accepting, you acknowledge receipt of the order in sealed condition and that the sale is final.'],
-      ['📷', 'Evidence record', 'The shop photographs your box on the bag QR (before sealing) and the sealed bag (QR-in-V + seal strip). With your door photo and QR scan, that’s the record used to review any claim.'],
+      ['📷', 'Evidence record', 'The shop photographs your product in its original factory wrap, then on the bag QR (before sealing), then the sealed bag (QR-in-V + seal strip). With your door photo and QR scan, that’s the record used to review any claim.'],
       ['↩️', 'One-tap cancel', 'Cancel until pickup with a quick reason. Fee: 15% of product; delivery refunded.'],
       ['▣', 'My Collection', 'Every delivered box syncs into your personal record: box, set, price, date, hits and breaks. <a href="/collection">Open →</a>'],
       ['▶', 'Box breaks', 'Paste a link to your break from YouTube, TikTok, Instagram, Facebook, X, Twitch and more. Public ones appear in <a href="/breaks">Breaks</a>.'],
@@ -207,18 +207,22 @@
 
   // ---- acceptance rule + evidence record + claim panel ----
   VPX.ACCEPT_RULE = 'Inspect your sealed bag before accepting. If the tear strip is pulled, the seal is lifted, or the bag looks opened, do not accept it — choose <b>Refuse / Report</b> and you’ll be refunded in full. By accepting, you acknowledge receipt of the order in sealed condition and that the sale is final.';
-  VPX.ACCEPT_RULE_SHOP = 'Buyers inspect the sealed bag at the door and must refuse it if it looks tampered; accepting confirms it arrived sealed and the sale is final. VendiPort keeps your two packing photos (before and after sealing), the buyer’s door photo, QR scans and timestamps as the record for each order and uses them to review any seal claim — so make both photos clear.';
-  VPX.RECORD_NOTE = 'VendiPort keeps the shop’s two packing photos (before and after sealing), the door photo, QR scans and timestamps as the record for each order, and uses them to review any claim.';
+  VPX.ACCEPT_RULE_SHOP = 'Buyers inspect the sealed bag at the door and must refuse it if it looks tampered; accepting confirms it arrived sealed and the sale is final. VendiPort keeps your three packing photos (factory wrap, before sealing, and sealed bag), the buyer’s door photo, QR scans and timestamps as the record for each order and uses them to review any seal claim — so make both photos clear.';
+  VPX.RECORD_NOTE = 'VendiPort keeps the shop’s three packing photos (factory wrap, before sealing, and sealed bag), the door photo, QR scans and timestamps as the record for each order, and uses them to review any claim.';
+  VPX.msrpBadge = function (p) {
+    const b = p && p.msrpBadge; if (!b) return '';
+    return `<span class="msrp-badge ${esc(b.tone)}" title="${esc(b.tooltip)}" tabindex="0">${esc(b.label)}</span>`;
+  };
   VPX.renderEvidence = function (host, order) {
     if (!host || !order || !order.evidence) return;
     const e = order.evidence; const d = e.door || {};
     const fig = (x, label, sub) => `<figure>${x && x.photo ? `<a href="${esc(x.photo)}" target="_blank" rel="noopener"><img src="${esc(x.photo)}" alt="${esc(label)}" /></a>` : `<div class="ph-none">${x ? 'photo on file' : 'not yet'}</div>`}<figcaption><b>${esc(label)}</b><br>${esc(sub)}${x && x.at ? '<br>' + esc(VPX.fmtTime(x.at)) : ''}</figcaption></figure>`;
     const doorPhoto = d.photo || d.qrScanPhoto;
-    const any = e.before || e.after || doorPhoto || e.arrivedAt;
+    const any = e.wrap || e.before || e.after || doorPhoto || e.arrivedAt;
     if (!any) { host.innerHTML = ''; return; }
     host.innerHTML = `<div class="panel evid"><div class="panel-label">Evidence record</div>
-      <div class="vp-cmp">${fig(e.before, '1 · Before sealing', 'product on the bag QR')}${fig(e.after, '2 · Sealed', 'QR-in-V + seal strip')}${fig(doorPhoto ? { photo: doorPhoto, at: d.qrScannedAt || d.proofAt } : null, '3 · At your door', 'handoff / QR scan')}</div>
-      <div class="vp-hint" style="margin:6px 0 0">${e.qrChain && e.qrChain.shopQrMatch ? '✓ Both shop photos are tied to the same QR scan. ' : ''}${e.qrChain && e.qrChain.doorQrMatch ? '✓ Your door scan matched the bag QR. ' : ''}${e.arrivedAt ? 'Arrived ' + esc(VPX.fmtTime(e.arrivedAt)) + '. ' : ''}${e.acceptedAt ? 'Accepted ' + esc(VPX.fmtTime(e.acceptedAt)) + '.' : ''}</div>
+      <div class="vp-cmp">${fig(e.wrap, '0 · Factory wrap', 'product in its original wrap')}${fig(e.before, '1 · Before sealing', 'product on the bag QR')}${fig(e.after, '2 · Sealed', 'QR-in-V + seal strip')}${fig(doorPhoto ? { photo: doorPhoto, at: d.qrScannedAt || d.proofAt } : null, '3 · At your door', 'handoff / QR scan')}</div>
+      <div class="vp-hint" style="margin:6px 0 0">${e.wrap ? '✓ Factory-wrap photo on file. ' : ''}${e.qrChain && e.qrChain.shopQrMatch ? '✓ Both bag photos are tied to the same QR scan. ' : ''}${e.qrChain && e.qrChain.doorQrMatch ? '✓ Your door scan matched the bag QR. ' : ''}${e.arrivedAt ? 'Arrived ' + esc(VPX.fmtTime(e.arrivedAt)) + '. ' : ''}${e.acceptedAt ? 'Accepted ' + esc(VPX.fmtTime(e.acceptedAt)) + '.' : ''}</div>
       <p class="vp-hint" style="margin:6px 0 0">${VPX.RECORD_NOTE}</p></div>`;
   };
   VPX.renderClaim = function (host, order, onChange) {
@@ -252,7 +256,7 @@
       const t = T.find((x) => x.key === k);
       return `<div class="vp-tl-step${t ? ' done' : ''}"><div class="dot">${t ? '✓' : i + 1}</div><div class="tx"><b>${labels[k]}</b> — ${esc(t ? t.text : text[k] || '')}${t ? `<span class="tm">${esc(VPX.fmtTime(t.at))}</span>` : ''}</div></div>`;
     }).join('');
-    const extra = ['dispatch', 'arrived', 'delivered', 'cancelled', 'refused'].map((k) => T.find((x) => x.key === k)).filter(Boolean)
+    const extra = ['wrap', 'dispatch', 'arrived', 'delivered', 'cancelled', 'refused'].map((k) => T.find((x) => x.key === k)).filter(Boolean)
       .map((t) => `<div class="vp-tl-step done"><div class="dot">✓</div><div class="tx"><b>${esc(t.key[0].toUpperCase() + t.key.slice(1))}</b> — ${esc(t.text)}<span class="tm">${esc(VPX.fmtTime(t.at))}</span></div></div>`).join('');
     const log = (order.smsLog || []).map((s) => `<div class="vp-sms">${esc(s.text)}<small>→ ${esc(s.to)} · ${esc(VPX.fmtTime(s.at))} · text sent (simulated)</small></div>`).join('');
     const nf = order.notify || {};

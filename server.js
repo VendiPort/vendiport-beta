@@ -1174,6 +1174,7 @@ async function handleApi(req, res, pathname) {
   // POST /api/orders/:id/start-pack
   if (method === 'POST' && /^\/api\/orders\/[^/]+\/start-pack$/.test(pathname)) {
     const id = pathname.split('/')[3];
+    { const o0 = findOrder(id); if (o0 && o0.status === 'PAID' && !o0.packWrap) return sendError(res, 409, 'Take Photo 0 (factory wrap) first — packing can’t start without it.'); }
     return transition(res, id, 'PAID', 'PACKING');
   }
 
@@ -1185,6 +1186,7 @@ async function handleApi(req, res, pathname) {
     if (!['PAID', 'PACKING'].includes(order.status)) {
       return sendError(res, 409, `Cannot pack-photo from ${order.status}`);
     }
+    if (!order.packWrap) return sendError(res, 409, 'Take Photo 0 (product still in its factory wrap) first — then Photo 1.');
     const body = await readBody(req);
     if (order.status === 'PAID') order.status = 'PACKING';
 
@@ -1258,6 +1260,7 @@ async function handleApi(req, res, pathname) {
     if (order.status !== 'PACKING') {
       return sendError(res, 409, `Cannot mark ready from ${order.status} — Start pack after PAID sale alert first`);
     }
+    if (!order.packWrap) return sendError(res, 409, 'Photo 0 (factory wrap) required first');
     if (!order.packBefore) return sendError(res, 409, 'Photo 1 (product on the bag QR) required first');
     if (!order.packAfter) return sendError(res, 409, 'Photo 2 (sealed bag, QR-in-V + seal strip visible) required before READY — it marks the order READY and calls delivery');
     order.status = 'READY';
