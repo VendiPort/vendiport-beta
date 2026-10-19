@@ -417,6 +417,25 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     r = await call('GET', '/js/shop.js');
     ok(/Reference only/.test(r.text) || /loadTrends/.test(r.text), 'shop.js has market trends panel');
 
+    console.log('Inventory history (store-side DEMO + LIVE)');
+    r = await call('GET', '/api/shop/shop_demo_01/inventory-history');
+    ok(r.status === 200 && r.json.period === '6m' && /DEMO history/.test(r.json.label) && /not financial advice/.test(r.json.label), 'inventory history: default 6m, labelled DEMO + not financial advice');
+    ok(r.json.items.length > 0 && r.json.items.every((i) => i.weeks.length === 27 && i.spark.stock.length === 27 && ['Fast mover', 'Steady', 'Slow', 'Sold out'].includes(i.status) && /Restock|Hold|Discount|Delist/.test(i.suggestion)), 'inventory history: 27 weekly snapshots, status + suggestion per SKU');
+    ok(r.json.items[0].weeks[0].weekOf === '2026-04-19', 'inventory history starts Apr 19 2026');
+    const ihp = (await call('GET', '/api/products?scope=shop')).json.products;
+    ok(r.json.items.every((i) => { const p = ihp.find((x) => x.id === i.id); return !p || i.currentStock === (p.windows || []).reduce((s, w) => s + (w.units || 0), 0); }), 'inventory history last snapshot = current stock');
+    const tcH = r.json.items.find((i) => /Topps Chrome/.test(i.title)), pzH = r.json.items.find((i) => /Panini Donruss Football/.test(i.title));
+    ok(tcH && pzH && tcH.avgDaysToSell < (pzH.avgDaysToSell || 1e9) && tcH.profile === 'rising' && pzH.profile === 'cooling', 'Topps sells faster than cooling Panini');
+    ok(r.json.totals.unitsSold === r.json.items.reduce((s, i) => s + i.unitsSold, 0) && r.json.totals.bestSeller && r.json.totals.slowest, 'inventory history totals row');
+    ok(r.json.totals.liveUnitsSold >= 0 && r.json.items.some((i) => i.source === 'DEMO+LIVE') === (r.json.totals.liveUnitsSold > 0), 'LIVE orders tagged');
+    const r30 = await call('GET', '/api/shop/shop_demo_01/inventory-history?period=30d');
+    ok(r30.json.period === '30d' && r30.json.items[0].weeks.length === 5 && r30.json.totals.unitsSold < r.json.totals.unitsSold, '30d period is a subset');
+    ok((await call('GET', '/api/shop/nope/inventory-history')).status === 404, 'unknown shop 404');
+    r = await call('GET', '/api/admin/inventory-history');
+    ok(r.status === 401, 'admin inventory history needs passcode');
+    r = await call('GET', '/js/shop.js');
+    ok(/loadHistory/.test(r.text) && /inventory-history/.test(r.text), 'shop.js has inventory history view');
+
     console.log('Static pages');
     for (const p of ['/', '/shop', '/account', '/admin', '/collection', '/radar', '/breaks', '/track/x', '/handoff/x']) {
       r = await call('GET', p);

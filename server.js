@@ -12,6 +12,7 @@ const path = require('path');
 const { randomUUID } = require('crypto');
 const { URL } = require('url');
 const TRENDS = require('./lib/trends');
+const INVH = require('./lib/invhistory');
 
 const ROOT = __dirname;
 const PUBLIC = path.join(ROOT, 'public');
@@ -570,6 +571,15 @@ async function handleApi(req, res, pathname) {
   // GET /api/market-trends — store-side reference (static seed, not live data)
   if (method === 'GET' && pathname === '/api/market-trends') {
     return send(res, 200, TRENDS.publicTrends());
+  }
+
+  // GET /api/shop/:id/inventory-history?period=30d|3m|6m — store-side DEMO history + LIVE orders (reference only)
+  const ihm = method === 'GET' && pathname.match(/^\/api\/shops?\/([^/]+)\/inventory-history$/);
+  if (ihm) {
+    const shop = readJson('shops.json', []).find((s) => s.id === ihm[1]);
+    if (!shop) return sendError(res, 404, 'Shop not found');
+    const period = new URL(req.url, 'http://x').searchParams.get('period') || '6m';
+    return send(res, 200, Object.assign({ shopId: shop.id }, INVH.build(readJson('products.json', []), readJson('orders.json', []), period, shop.id)));
   }
 
   // GET /api/health

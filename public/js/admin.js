@@ -239,8 +239,13 @@ const VIEWS = {
     try { const r = await fetch('/api/market-trends'); TR = await r.json(); } catch (_) {}
     const trendCard = TR && TR.items ? `<div class="card sec"><h2>Market trends (read-only)</h2><p class="note">${esc(TR.label)} · as of ${esc(TR.asOf)}. ${esc(TR.footnote)}</p>
       ${table(['Product', 'Type', 'Released', 'Release $', 'Now', 'Change', 'Suggestion'], TR.items.map((i) => [esc(i.product), esc(i.category), esc(i.release) + (i.statusLabel ? ' · ' + esc(i.statusLabel) : ''), usd(i.releasePrice), usd(i.currentPrice), i.status === 'presale' ? '—' : i.pctChange > 0 ? '<span style="color:#3fcf6e">▲ +' + i.pctChange + '%</span>' : '<span style="color:#ff5a5a">▼ ' + i.pctChange + '%</span>', esc(i.suggestion.text)]), [3, 4, 5])}</div>` : '';
+    let IH = null;
+    try { IH = await A('/api/admin/inventory-history?period=6m'); } catch (_) {}
+    const ihCard = IH ? `<div class="card sec"><h2>Inventory history — all stores, last 6 months (read-only) ${DEMO}</h2><p class="note">${esc(IH.label)}. Units sold ${IH.totals.unitsSold} (${IH.totals.liveUnitsSold} live) · revenue ${usd(IH.totals.revenue)} · best seller ${esc(IH.totals.bestSeller ? IH.totals.bestSeller.title : '—')} · slowest ${esc(IH.totals.slowest ? IH.totals.slowest.title : '—')}</p>
+      ${table(['Store', 'SKU', 'Stock', 'Sold', 'Sell-through', 'Avg days', 'Revenue', 'Status', 'Suggestion'], IH.stores.flatMap((s) => s.items.map((i) => [esc(s.name), esc(i.title) + (i.liveUnitsSold ? ' ' + REAL : ''), i.currentStock, i.unitsSold, i.sellThroughPct + '%', i.avgDaysToSell == null ? '—' : i.avgDaysToSell, usd(i.revenue), esc(i.status), esc(i.suggestion)])), [2, 3, 4, 5, 6])}</div>` : '';
     v.innerHTML = `
       ${msrpCard}
+      ${ihCard}
       ${trendCard}
       <div class="grid2">
         <div class="card sec"><h2>Funnel — Browse › Select › Checkout › Paid ${REAL}</h2>${fun(R.funnel)}<p class="note">Counts since the last reset; % is step-to-step.</p></div>

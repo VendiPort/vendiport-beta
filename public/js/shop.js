@@ -98,18 +98,21 @@ function switchTab(name) {
   qs('#tab-windows').classList.toggle('hidden', name !== 'windows');
   qs('#tab-wanted').classList.toggle('hidden', name !== 'wanted');
   qs('#tab-earnings').classList.toggle('hidden', name !== 'earnings');
+  const ihEl = qs('#tab-history');
+  if (ihEl) ihEl.classList.toggle('hidden', name !== 'history');
   const trEl = qs('#tab-trends');
   if (trEl) trEl.classList.toggle('hidden', name !== 'trends');
   const statsEl = qs('#tab-stats');
   if (statsEl) statsEl.classList.toggle('hidden', name !== 'stats');
   qs('#page-title').textContent =
-    name === 'jobs' ? 'Jobs' : name === 'inventory' ? 'Inventory' : name === 'windows' ? 'Windows' : name === 'wanted' ? 'Wanted' : name === 'earnings' ? 'Earnings' : name === 'trends' ? 'Market trends' : 'Stats';
+    name === 'jobs' ? 'Jobs' : name === 'inventory' ? 'Inventory' : name === 'windows' ? 'Windows' : name === 'wanted' ? 'Wanted' : name === 'earnings' ? 'Earnings' : name === 'trends' ? 'Market trends' : name === 'history' ? 'Inventory history' : 'Stats';
   qs('#page-sub').textContent =
     name === 'jobs' ? 'Shop stream: PAID → pack → seal → READY → pickup → done'
     : name === 'inventory' ? 'Upload sealed SKUs to the anonymous machine'
     : name === 'windows' ? 'Shop delivery windows · own-driver toggle'
     : name === 'wanted' ? 'Ranked buyer demand · tap “I have this” to list it and alert followers'
     : name === 'earnings' ? 'Daily payout summary · what you’ve earned'
+    : name === 'history' ? 'How your inventory moved · DEMO history + LIVE orders'
     : name === 'trends' ? 'Which sealed boxes are rising or cooling · reference for your pricing'
     : 'Orders today · units listed · own-driver';
   if (name !== 'inventory') stopBarcodeScan();
@@ -119,6 +122,51 @@ function switchTab(name) {
   if (name === 'wanted') loadWanted();
   if (name === 'earnings') loadEarnings();
   if (name === 'trends') loadTrends();
+  if (name === 'history') loadHistory();
+}
+
+/* ---------- Inventory history (DEMO history + LIVE orders, reference only) ---------- */
+const IH_SHOP = 'shop_demo_01';
+let ihPeriod = '6m';
+let ihBound = false;
+function ihSpark(stock, sold) {
+  const W = 140, H = 34, n = stock.length, mx = Math.max(1, ...stock, ...sold);
+  const x = (i) => (n < 2 ? 0 : (i / (n - 1)) * W);
+  const line = stock.map((v, i) => `${x(i).toFixed(1)},${(H - (v / mx) * (H - 2) - 1).toFixed(1)}`).join(' ');
+  const bw = Math.max(1, W / n - 1);
+  const bars = sold.map((v, i) => `<rect x="${(i * W / n).toFixed(1)}" y="${(H - (v / mx) * (H - 2)).toFixed(1)}" width="${bw.toFixed(1)}" height="${((v / mx) * (H - 2)).toFixed(1)}" fill="rgba(255,216,74,.55)"/>`).join('');
+  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-label="stock line, sales bars">${bars}<polyline fill="none" stroke="#7fe6dc" stroke-width="1.6" points="${line}"/></svg>`;
+}
+function renderHistory(d) {
+  const T = d.totals;
+  qs('#ih-label').textContent = `${d.label} · ${d.periodLabel}`;
+  qs('#ih-foot').textContent = d.note;
+  qs('#ih-totals').innerHTML = `<div class="ih-tot">
+    <div><span class="mono">Units sold</span><b>${T.unitsSold}</b>${T.liveUnitsSold ? `<span class="ih-live">${T.liveUnitsSold} LIVE</span>` : ''}</div>
+    <div><span class="mono">Revenue</span><b>${money(T.revenue)}</b></div>
+    <div><span class="mono">Best seller</span><b style="font-size:14px">${escapeHtml(T.bestSeller ? T.bestSeller.title : '—')}</b>${T.bestSeller ? T.bestSeller.unitsSold + ' sold' : ''}</div>
+    <div><span class="mono">Slowest item</span><b style="font-size:14px">${escapeHtml(T.slowest ? T.slowest.title : '—')}</b>${T.slowest ? T.slowest.sellThroughPct + '% sell-through' : ''}</div></div>`;
+  const cls = { 'Fast mover': 'ih-fast', Steady: 'ih-steady', Slow: 'ih-slow', 'Sold out': 'ih-out' };
+  qs('#ih-list').className = '';
+  qs('#ih-list').innerHTML = d.items.map((i) => {
+    const pd = i.priceNow - i.priceStart;
+    return `<div class="ih-row"><div><b>${escapeHtml(i.title)}</b> <span class="ih-chip ${cls[i.status] || ''}">${escapeHtml(i.status)}</span> ${i.liveUnitsSold ? `<span class="ih-live">LIVE +${i.liveUnitsSold}</span>` : '<span class="mono">DEMO</span>'}
+      <div class="ih-stats"><span>Stock now <b>${i.currentStock}</b></span><span>Sold <b>${i.unitsSold}</b></span><span>Sell-through <b>${i.sellThroughPct}%</b></span><span>Avg days to sell <b>${i.avgDaysToSell == null ? '—' : i.avgDaysToSell}</b></span><span>Revenue <b>${money(i.revenue)}</b></span><span>Price ${money(i.priceStart)} → <b>${money(i.priceNow)}</b> ${pd > 0 ? '▲' : pd < 0 ? '▼' : ''}</span>${i.marketNow != null ? `<span>Market ref ${money(i.marketNow)}</span>` : ''}${i.restocks ? `<span>Restocked ${i.restocks}</span>` : ''}</div></div>
+      <div>${ihSpark(i.spark.stock, i.spark.sold)}</div>
+      <div class="ih-sug">→ ${escapeHtml(i.suggestion)}</div></div>`;
+  }).join('') || 'No SKUs yet.';
+}
+async function loadHistory() {
+  if (!ihBound) {
+    ihBound = true;
+    document.querySelectorAll('[data-ihp]').forEach((b) => b.addEventListener('click', () => {
+      ihPeriod = b.dataset.ihp;
+      document.querySelectorAll('[data-ihp]').forEach((x) => x.classList.toggle('on', x === b));
+      loadHistory();
+    }));
+  }
+  try { renderHistory(await api(`/api/shop/${IH_SHOP}/inventory-history?period=${ihPeriod}`)); }
+  catch (e) { qs('#ih-list').textContent = 'Could not load inventory history.'; }
 }
 
 /* ---------- Market trends (store-side reference, not live data) ---------- */

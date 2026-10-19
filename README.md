@@ -117,3 +117,18 @@ Items carry confirmed release dates (`releaseDate`), sorted oldest first with a 
 - Shop page → **Market trends** tab: ▲/▼ arrows, release vs now, bar scale, All / Sports / Pokémon filters, footnote "Reference only. Set your own prices." (not financial advice).
 - Inventory rows whose title fuzzy-matches a trend product (all non-year tokens present, most specific wins; `lib/trends.js`) show a trend badge plus price vs current market. Different-year matches are flagged "newer edition". Only on `?scope=shop`; the buyer catalog never carries trend data.
 - Admin → Product health shows a read-only copy. Update by editing the JSON and redeploying.
+
+## Inventory history (store side)
+
+Shop dashboard → **Inventory history** tab (30 days / 3 months / 6 months, default 6 months).
+`GET /api/shop/:id/inventory-history?period=30d|3m|6m` (store-side only; never on buyer UI).
+Admin read-only rollup: `GET /api/admin/inventory-history` (shown on Product health).
+
+- **DEMO history:** weekly snapshots Apr 19 – Oct 19 2026 seeded deterministically per SKU
+  (`lib/invhistory.js`), walked backward from today's real stock so the last snapshot = stock on the machine.
+  Rising lines (Topps/Bowman, or a rising match in `data/market-trends.json`) sell faster; cooling lines
+  (Pokémon post-launch, Panini) slower. Market reference price only when the trend matches the same edition.
+- **LIVE:** real paid/delivered orders in `orders.json` are added on top and tagged LIVE.
+- Per SKU: stock, sold, sell-through, avg days to sell, revenue, price start→now, sparkline, status
+  (Fast mover ≤21d / Steady ≤60d / Slow / Sold out) and a plain suggestion (restock / hold / discount / delist).
+- Reference / demo only — not financial advice.
