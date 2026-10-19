@@ -238,7 +238,7 @@ const VIEWS = {
     let TR = null;
     try { const r = await fetch('/api/market-trends'); TR = await r.json(); } catch (_) {}
     const trendCard = TR && TR.items ? `<div class="card sec"><h2>Market trends (read-only)</h2><p class="note">${esc(TR.label)} · as of ${esc(TR.asOf)}. ${esc(TR.footnote)}</p>
-      ${table(['Product', 'Type', 'Release', 'Now', 'Change', 'Suggestion'], TR.items.map((i) => [esc(i.product), esc(i.category), usd(i.releasePrice), usd(i.currentPrice), i.pctChange > 0 ? '<span style="color:#3fcf6e">▲ +' + i.pctChange + '%</span>' : '<span style="color:#ff5a5a">▼ ' + i.pctChange + '%</span>', esc(i.suggestion.text)]), [2, 3, 4])}</div>` : '';
+      ${table(['Product', 'Type', 'Released', 'Release $', 'Now', 'Change', 'Suggestion'], TR.items.map((i) => [esc(i.product), esc(i.category), esc(i.release) + (i.statusLabel ? ' · ' + esc(i.statusLabel) : ''), usd(i.releasePrice), usd(i.currentPrice), i.status === 'presale' ? '—' : i.pctChange > 0 ? '<span style="color:#3fcf6e">▲ +' + i.pctChange + '%</span>' : '<span style="color:#ff5a5a">▼ ' + i.pctChange + '%</span>', esc(i.suggestion.text)]), [3, 4, 5])}</div>` : '';
     v.innerHTML = `
       ${msrpCard}
       ${trendCard}

@@ -109,6 +109,8 @@ There is no mandatory Yes/No seal question. At the door the buyer scans the tote
 
 ## Market trends (store-side, round 5)
 
+Items carry confirmed release dates (`releaseDate`), sorted oldest first with a "By % change" toggle. Unreleased boxes (Topps Cosmic Chrome Baseball, Nov 4; 2026/27 Topps Flagship Basketball, ~Nov 5) are `status: presale`, labelled "Presale — not released yet", with no hot/cooling suggestion. Boxes out ≤7 days get "out N days" (Topps Update Baseball: out 5 days).
+
 `data/market-trends.json` is a static seed of 13 sealed boxes (release price → current price, % change, sources), **as of Oct 19, 2026**, built from `box-price-trends.csv`. It is a *Market reference (asking-price based, Oct 2026), not live data*. Sports = MSRP vs median eBay asking prices (HobbyMonitor); Pokémon = first tracked vs current TCGplayer market (tcgrate).
 
 - `GET /api/market-trends` returns the list sorted by % change, each with a neutral suggestion (>50% "Hot", 0–50% mild, <0 "Cooling").

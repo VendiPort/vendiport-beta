@@ -45,7 +45,7 @@ async function init() {
     }
   });
 
-  document.querySelectorAll('.tab').forEach((b) => {
+  document.querySelectorAll('.tab[data-tab]').forEach((b) => {
     b.addEventListener('click', () => switchTab(b.dataset.tab));
   });
 
@@ -92,7 +92,7 @@ function updateModeCopy(explicit) {
 
 function switchTab(name) {
   tab = name;
-  document.querySelectorAll('.tab').forEach((b) => b.classList.toggle('on', b.dataset.tab === name));
+  document.querySelectorAll('.tab[data-tab]').forEach((b) => b.classList.toggle('on', b.dataset.tab === name));
   qs('#tab-jobs').classList.toggle('hidden', name !== 'jobs');
   qs('#tab-inventory').classList.toggle('hidden', name !== 'inventory');
   qs('#tab-windows').classList.toggle('hidden', name !== 'windows');
@@ -124,6 +124,7 @@ function switchTab(name) {
 /* ---------- Market trends (store-side reference, not live data) ---------- */
 let trendsData = null;
 let trendsFilter = 'all';
+let trendsSort = 'date';
 function trendArrow(pct) {
   if (pct > 0) return `<span class="trend-up">▲ +${pct}%</span>`;
   if (pct < 0) return `<span class="trend-down">▼ ${pct}%</span>`;
@@ -131,6 +132,7 @@ function trendArrow(pct) {
 }
 function trendBadgeHtml(t) {
   if (!t) return '';
+  if (t.status === 'presale') return `<span class="trend-badge trend-flat" title="${escapeHtml(t.product + ' · ' + t.note)}">Presale — not released yet · ${escapeHtml(t.product)}</span>`;
   const cls = t.pctChange > 0 ? 'trend-up' : t.pctChange < 0 ? 'trend-down' : 'trend-flat';
   const vs = t.vsMarketPct == null ? '' : ` · your price ${t.vsMarketPct > 0 ? '+' : ''}${t.vsMarketPct}% vs market ${money(t.currentPrice)}`;
   return `<span class="trend-badge ${cls}" title="${escapeHtml(t.product + ' · ' + t.note + (t.sameEdition ? '' : ' · trend is for a different year/edition'))}">${t.pctChange > 0 ? '▲' : t.pctChange < 0 ? '▼' : '●'} Market ${t.pctChange > 0 ? '+' : ''}${t.pctChange}%${vs}${t.sameEdition ? '' : ' (newer edition)'}</span>`;
@@ -138,17 +140,19 @@ function trendBadgeHtml(t) {
 function renderTrends() {
   const box = qs('#trends-list');
   if (!box || !trendsData) return;
-  const items = trendsData.items.filter((i) => trendsFilter === 'all' || i.group === trendsFilter);
+  const items = trendsData.items.filter((i) => trendsFilter === 'all' || i.group === trendsFilter).slice();
+  if (trendsSort === 'pct') items.sort((a, b) => (a.status === 'presale') - (b.status === 'presale') || b.pctChange - a.pctChange);
+  else items.sort((a, b) => String(a.releaseDate).localeCompare(String(b.releaseDate)));
   const maxAbs = Math.max(1, ...trendsData.items.map((i) => Math.abs(i.pctChange)));
   box.classList.remove('empty');
   box.innerHTML = items.map((i) => {
-    const w = (Math.abs(i.pctChange) / maxAbs) * 50;
+    const w = i.status === 'presale' ? 0 : (Math.abs(i.pctChange) / maxAbs) * 50;
     const bar = i.pctChange >= 0
       ? `<i style="left:50%;width:${w}%;background:#3fcf6e"></i>`
       : `<i style="left:${50 - w}%;width:${w}%;background:#ff5a5a"></i>`;
     return `<div class="trend-row">
-      <div><strong style="font-size:14px">${escapeHtml(i.product)}</strong><div class="mono">${escapeHtml(i.category)} · release ${money(i.releasePrice)} → now ${money(i.currentPrice)}</div></div>
-      <div style="text-align:right">${trendArrow(i.pctChange)}</div>
+      <div><strong style="font-size:14px">${escapeHtml(i.product)}</strong><div class="mono">${escapeHtml(i.category)} · ${escapeHtml(i.release)}${i.statusLabel ? ` · <b class="${i.status === 'presale' ? 'trend-flat' : 'trend-up'}">${escapeHtml(i.statusLabel)}</b>` : ''} · release ${money(i.releasePrice)} → now ${money(i.currentPrice)}</div></div>
+      <div style="text-align:right">${i.status === 'presale' ? '<span class="trend-flat">Presale</span>' : trendArrow(i.pctChange)}</div>
       <div class="trend-bar"><span class="mid"></span>${bar}</div>
       <div class="trend-sug">${escapeHtml(i.suggestion.text)} · <a href="${escapeHtml(i.source)}" target="_blank" rel="noopener">source</a></div>
     </div>`;
@@ -162,6 +166,11 @@ async function loadTrends() {
     document.querySelectorAll('[data-tf]').forEach((b) => b.addEventListener('click', () => {
       trendsFilter = b.dataset.tf;
       document.querySelectorAll('[data-tf]').forEach((x) => x.classList.toggle('on', x === b));
+      renderTrends();
+    }));
+    document.querySelectorAll('[data-ts]').forEach((b) => b.addEventListener('click', () => {
+      trendsSort = b.dataset.ts;
+      document.querySelectorAll('[data-ts]').forEach((x) => x.classList.toggle('on', x === b));
       renderTrends();
     }));
   }
