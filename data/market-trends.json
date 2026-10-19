@@ -1,0 +1,155 @@
+{
+  "asOf": "Oct 19, 2026",
+  "label": "Market reference (asking-price based, Oct 2026), not live data",
+  "footnote": "Reference only. Set your own prices.",
+  "method": "Sports: MSRP vs median current eBay asking prices (HobbyMonitor, Oct 6-18 2026). Pokemon: first tracked TCGplayer market price vs Oct 19 2026 market price (tcgrate). Asking prices run higher than completed sales.",
+  "sources": [
+    "https://www.hobbymonitor.com/wax",
+    "https://tcgrate.com"
+  ],
+  "items": [
+    {
+      "product": "Pokemon Pitch Black booster box",
+      "category": "Pokemon",
+      "group": "pokemon",
+      "release": "Jul 2026",
+      "releasePrice": 360,
+      "currentPrice": 181.85,
+      "pctChange": -49,
+      "source": "https://tcgrate.com/pokemon/me05-pitch-black/pitch-black-booster-box/",
+      "sourceNote": "TCGplayer market, Oct 19 2026; release = first tracked price derived from 'All time' %"
+    },
+    {
+      "product": "Pokemon Chaos Rising booster box",
+      "category": "Pokemon",
+      "group": "pokemon",
+      "release": "May 2026",
+      "releasePrice": 261,
+      "currentPrice": 180.15,
+      "pctChange": -31,
+      "source": "https://tcgrate.com/pokemon/me04-chaos-rising/chaos-rising-booster-box/",
+      "sourceNote": "TCGplayer market, Oct 19 2026; release = first tracked price derived from 'All time' %"
+    },
+    {
+      "product": "Pokemon Perfect Order booster box",
+      "category": "Pokemon",
+      "group": "pokemon",
+      "release": "Mar 2026",
+      "releasePrice": 246,
+      "currentPrice": 175.4,
+      "pctChange": -29,
+      "source": "https://tcgrate.com/pokemon/me03-perfect-order/perfect-order-booster-box/",
+      "sourceNote": "TCGplayer market, Oct 19 2026; release = first tracked price derived from 'All time' %"
+    },
+    {
+      "product": "2025/26 Panini Prizm Basketball",
+      "category": "Basketball",
+      "group": "sports",
+      "release": "2026",
+      "releasePrice": 400,
+      "currentPrice": 330,
+      "pctChange": -18,
+      "source": "https://www.hobbymonitor.com/wax",
+      "sourceNote": "MSRP vs median current listings, as of Oct 6-18 2026"
+    },
+    {
+      "product": "2026 Panini Prizm Baseball",
+      "category": "Baseball",
+      "group": "sports",
+      "release": "2026",
+      "releasePrice": 200,
+      "currentPrice": 247,
+      "pctChange": 24,
+      "source": "https://www.hobbymonitor.com/wax",
+      "sourceNote": "MSRP vs median current listings, as of Oct 6-18 2026"
+    },
+    {
+      "product": "2026 Bowman Football",
+      "category": "Football",
+      "group": "sports",
+      "release": "2026",
+      "releasePrice": 310,
+      "currentPrice": 400,
+      "pctChange": 29,
+      "source": "https://www.hobbymonitor.com/wax",
+      "sourceNote": "MSRP vs median current listings, as of Oct 6-18 2026"
+    },
+    {
+      "product": "2026/27 Topps Flagship Basketball",
+      "category": "Basketball",
+      "group": "sports",
+      "release": "2026",
+      "releasePrice": 170,
+      "currentPrice": 230,
+      "pctChange": 35,
+      "source": "https://www.hobbymonitor.com/wax",
+      "sourceNote": "MSRP vs median current listings, as of Oct 6-18 2026"
+    },
+    {
+      "product": "2026 Topps Update Baseball",
+      "category": "Baseball",
+      "group": "sports",
+      "release": "2026",
+      "releasePrice": 110,
+      "currentPrice": 180,
+      "pctChange": 64,
+      "source": "https://www.hobbymonitor.com/wax",
+      "sourceNote": "MSRP vs median current listings, as of Oct 6-18 2026"
+    },
+    {
+      "product": "2026 Topps Flagship Football",
+      "category": "Football",
+      "group": "sports",
+      "release": "Aug 2026",
+      "releasePrice": 130,
+      "currentPrice": 215,
+      "pctChange": 65,
+      "source": "https://www.hobbymonitor.com/wax",
+      "sourceNote": "MSRP vs median current listings, as of Oct 6-18 2026"
+    },
+    {
+      "product": "2026 Topps Chrome Baseball",
+      "category": "Baseball",
+      "group": "sports",
+      "release": "2026",
+      "releasePrice": 240,
+      "currentPrice": 450,
+      "pctChange": 88,
+      "source": "https://www.hobbymonitor.com/wax",
+      "sourceNote": "MSRP vs median current listings, as of Oct 6-18 2026"
+    },
+    {
+      "product": "2026 Bowman Chrome Baseball",
+      "category": "Baseball",
+      "group": "sports",
+      "release": "2026",
+      "releasePrice": 300,
+      "currentPrice": 575,
+      "pctChange": 92,
+      "source": "https://www.hobbymonitor.com/wax",
+      "sourceNote": "MSRP vs median current listings, as of Oct 6-18 2026"
+    },
+    {
+      "product": "2026 Topps Cosmic Chrome Baseball",
+      "category": "Baseball",
+      "group": "sports",
+      "release": "2026",
+      "releasePrice": 490,
+      "currentPrice": 950,
+      "pctChange": 94,
+      "source": "https://www.hobbymonitor.com/wax",
+      "sourceNote": "MSRP vs median current listings, as of Oct 6-18 2026"
+    },
+    {
+      "product": "2026 Topps Finest Baseball",
+      "category": "Baseball",
+      "group": "sports",
+      "release": "2026",
+      "releasePrice": 340,
+      "currentPrice": 700,
+      "pctChange": 106,
+      "source": "https://www.hobbymonitor.com/wax",
+      "sourceNote": "MSRP vs median current listings, as of Oct 6-18 2026"
+    }
+  ]
+}

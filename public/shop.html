@@ -70,6 +70,13 @@
       0%,100% { box-shadow: 0 0 12px rgba(232,74,74,0.3); }
       50% { box-shadow: 0 0 28px rgba(232,74,74,0.55); }
     }
+    .trend-row { display:grid; grid-template-columns: 1fr auto; gap:4px 10px; padding:9px 0; border-bottom:1px solid rgba(255,255,255,.08); }
+    .trend-up { color:#3fcf6e; font-weight:700; } .trend-down { color:#ff5a5a; font-weight:700; } .trend-flat { color:#aaa; }
+    .trend-bar { grid-column:1 / -1; position:relative; height:6px; background:rgba(255,255,255,.08); border-radius:3px; }
+    .trend-bar i { position:absolute; top:0; bottom:0; border-radius:3px; }
+    .trend-bar .mid { position:absolute; left:50%; top:-2px; bottom:-2px; width:1px; background:rgba(255,255,255,.35); }
+    .trend-sug { grid-column:1 / -1; font-size:12px; opacity:.85; }
+    .trend-badge { font-size:11px; padding:2px 6px; border-radius:8px; border:1px solid currentColor; }
     .tab .badge {
       display:inline-grid; place-items:center; min-width:18px; height:18px; padding:0 5px;
       margin-left:4px; border-radius:999px; background:#fff; color:#e84a4a;
@@ -108,6 +115,7 @@
       <button type="button" class="tab" data-tab="wanted">Wanted<span class="badge" id="wanted-badge" data-count="0"></span></button>
       <button type="button" class="tab" data-tab="earnings">Earnings</button>
       <button type="button" class="tab" data-tab="stats">Stats</button>
+      <button type="button" class="tab" data-tab="trends">Market trends</button>
     </div>
 
     <div class="money-strip">
@@ -237,6 +245,21 @@
         <div class="step-label">Today (JSON demo)</div>
         <p class="sub" style="margin-bottom:10px">Light shop stats — free-tier disk may reset on redeploy.</p>
         <div id="stats-body" class="empty">Loading…</div>
+      </div>
+    </section>
+
+    <!-- MARKET TRENDS (store-side only) -->
+    <section id="tab-trends" class="hidden">
+      <div class="card">
+        <div class="step-label">Market trends · sealed boxes</div>
+        <p class="sub" id="trends-label" style="margin-bottom:8px">Market reference (asking-price based, Oct 2026), not live data</p>
+        <div class="trend-filters" style="display:flex;gap:6px;margin-bottom:10px">
+          <button type="button" class="tab on" data-tf="all">All</button>
+          <button type="button" class="tab" data-tf="sports">Sports</button>
+          <button type="button" class="tab" data-tf="pokemon">Pokémon</button>
+        </div>
+        <div id="trends-list" class="empty">Loading…</div>
+        <p class="mono" id="trends-foot" style="margin-top:10px">Reference only. Set your own prices.</p>
       </div>
     </section>
 

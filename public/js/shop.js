@@ -98,16 +98,19 @@ function switchTab(name) {
   qs('#tab-windows').classList.toggle('hidden', name !== 'windows');
   qs('#tab-wanted').classList.toggle('hidden', name !== 'wanted');
   qs('#tab-earnings').classList.toggle('hidden', name !== 'earnings');
+  const trEl = qs('#tab-trends');
+  if (trEl) trEl.classList.toggle('hidden', name !== 'trends');
   const statsEl = qs('#tab-stats');
   if (statsEl) statsEl.classList.toggle('hidden', name !== 'stats');
   qs('#page-title').textContent =
-    name === 'jobs' ? 'Jobs' : name === 'inventory' ? 'Inventory' : name === 'windows' ? 'Windows' : name === 'wanted' ? 'Wanted' : name === 'earnings' ? 'Earnings' : 'Stats';
+    name === 'jobs' ? 'Jobs' : name === 'inventory' ? 'Inventory' : name === 'windows' ? 'Windows' : name === 'wanted' ? 'Wanted' : name === 'earnings' ? 'Earnings' : name === 'trends' ? 'Market trends' : 'Stats';
   qs('#page-sub').textContent =
     name === 'jobs' ? 'Shop stream: PAID → pack → seal → READY → pickup → done'
     : name === 'inventory' ? 'Upload sealed SKUs to the anonymous machine'
     : name === 'windows' ? 'Shop delivery windows · own-driver toggle'
     : name === 'wanted' ? 'Ranked buyer demand · tap “I have this” to list it and alert followers'
     : name === 'earnings' ? 'Daily payout summary · what you’ve earned'
+    : name === 'trends' ? 'Which sealed boxes are rising or cooling · reference for your pricing'
     : 'Orders today · units listed · own-driver';
   if (name !== 'inventory') stopBarcodeScan();
   if (name === 'inventory') loadInventory();
@@ -115,6 +118,54 @@ function switchTab(name) {
   if (name === 'stats') loadStats();
   if (name === 'wanted') loadWanted();
   if (name === 'earnings') loadEarnings();
+  if (name === 'trends') loadTrends();
+}
+
+/* ---------- Market trends (store-side reference, not live data) ---------- */
+let trendsData = null;
+let trendsFilter = 'all';
+function trendArrow(pct) {
+  if (pct > 0) return `<span class="trend-up">▲ +${pct}%</span>`;
+  if (pct < 0) return `<span class="trend-down">▼ ${pct}%</span>`;
+  return '<span class="trend-flat">● 0%</span>';
+}
+function trendBadgeHtml(t) {
+  if (!t) return '';
+  const cls = t.pctChange > 0 ? 'trend-up' : t.pctChange < 0 ? 'trend-down' : 'trend-flat';
+  const vs = t.vsMarketPct == null ? '' : ` · your price ${t.vsMarketPct > 0 ? '+' : ''}${t.vsMarketPct}% vs market ${money(t.currentPrice)}`;
+  return `<span class="trend-badge ${cls}" title="${escapeHtml(t.product + ' · ' + t.note + (t.sameEdition ? '' : ' · trend is for a different year/edition'))}">${t.pctChange > 0 ? '▲' : t.pctChange < 0 ? '▼' : '●'} Market ${t.pctChange > 0 ? '+' : ''}${t.pctChange}%${vs}${t.sameEdition ? '' : ' (newer edition)'}</span>`;
+}
+function renderTrends() {
+  const box = qs('#trends-list');
+  if (!box || !trendsData) return;
+  const items = trendsData.items.filter((i) => trendsFilter === 'all' || i.group === trendsFilter);
+  const maxAbs = Math.max(1, ...trendsData.items.map((i) => Math.abs(i.pctChange)));
+  box.classList.remove('empty');
+  box.innerHTML = items.map((i) => {
+    const w = (Math.abs(i.pctChange) / maxAbs) * 50;
+    const bar = i.pctChange >= 0
+      ? `<i style="left:50%;width:${w}%;background:#3fcf6e"></i>`
+      : `<i style="left:${50 - w}%;width:${w}%;background:#ff5a5a"></i>`;
+    return `<div class="trend-row">
+      <div><strong style="font-size:14px">${escapeHtml(i.product)}</strong><div class="mono">${escapeHtml(i.category)} · release ${money(i.releasePrice)} → now ${money(i.currentPrice)}</div></div>
+      <div style="text-align:right">${trendArrow(i.pctChange)}</div>
+      <div class="trend-bar"><span class="mid"></span>${bar}</div>
+      <div class="trend-sug">${escapeHtml(i.suggestion.text)} · <a href="${escapeHtml(i.source)}" target="_blank" rel="noopener">source</a></div>
+    </div>`;
+  }).join('') || '<p class="mono">No products in this filter.</p>';
+}
+async function loadTrends() {
+  if (!trendsData) {
+    try { trendsData = await api('/api/market-trends'); } catch (e) { qs('#trends-list').textContent = 'Could not load market trends.'; return; }
+    qs('#trends-label').textContent = `${trendsData.label} · as of ${trendsData.asOf}`;
+    qs('#trends-foot').textContent = `${trendsData.footnote} Not financial advice. ${trendsData.method}`;
+    document.querySelectorAll('[data-tf]').forEach((b) => b.addEventListener('click', () => {
+      trendsFilter = b.dataset.tf;
+      document.querySelectorAll('[data-tf]').forEach((x) => x.classList.toggle('on', x === b));
+      renderTrends();
+    }));
+  }
+  renderTrends();
 }
 
 async function loadStats() {
@@ -756,6 +807,7 @@ async function loadInventory() {
           <div class="mono">${escapeHtml(p.category)} · ${money(p.price)}${p.msrp ? ` · <span class="msrp-col" title="${escapeHtml((p.msrpBadge || {}).tooltip || '')}">vs MSRP ${money(p.msrp)}: <b class="msrp-badge ${escapeHtml((p.msrpBadge || {}).tone || '')}">${escapeHtml((p.msrpBadge || {}).label || '')}</b></span>` : ' · vs MSRP: n/a'} · ${earliest ? earliest.units + ' @ ' + earliest.label : 'no window'}${p.barcode ? ' · barcode ' + escapeHtml(p.barcode) : ''}</div>
           <div style="margin-top:5px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
             ${p.stock && p.stock.soldOut ? '<span class="stock-out">⛔ 0 stock — auto-hidden from buyers</span>' : p.stock && p.stock.low ? `<span class="stock-low">⚠ Low stock · ${p.stock.total} left</span>` : `<span class="mono">${p.stock ? p.stock.total : ''} total units</span>`}
+            ${trendBadgeHtml(p.trend)}
             ${p.wantedBuyers ? `<span class="want-badge" title="${escapeHtml((p.wantedLabels || []).join(' · '))}">★ Someone wants this · ${p.wantedBuyers} buyer${p.wantedBuyers > 1 ? 's' : ''}</span>` : ''}
           </div>
         </div>

@@ -398,6 +398,22 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     r = await call('GET', '/js/shop.js');
     ok(/factory-sealed product/.test(r.text) && /mystery packs/.test(r.text), 'shop onboarding terms: factory-sealed only, no repacked/mystery packs');
 
+    console.log('Market trends (store-side reference)');
+    r = await call('GET', '/api/market-trends');
+    ok(r.status === 200 && r.json.items.length === 13, 'market trends: 13 products');
+    ok(/not live data/.test(r.json.label) && r.json.asOf === 'Oct 19, 2026' && r.json.sources.length >= 2, 'market trends: labelled reference + as-of + sources');
+    ok(r.json.items.every((x, i, a) => !i || a[i - 1].pctChange >= x.pctChange), 'market trends sorted by % change');
+    ok(r.json.items.find((x) => x.pctChange > 50).suggestion.level === 'hot' && r.json.items.find((x) => x.pctChange < 0).suggestion.level === 'cooling', 'market trends: hot/cooling suggestions');
+    ok(r.json.items.some((x) => x.group === 'pokemon') && r.json.items.some((x) => x.group === 'sports'), 'market trends: sports + pokemon groups');
+    r = await call('GET', '/api/products?scope=shop');
+    const tc = r.json.products.find((p) => /Topps Chrome Baseball/.test(p.title));
+    ok(tc && tc.trend && tc.trend.product === '2026 Topps Chrome Baseball' && tc.trend.vsMarketPct != null, 'shop inventory row carries matched trend + price vs market');
+    ok(!r.json.products.find((p) => /Mosaic/.test(p.title)).trend, 'no trend on unmatched SKU');
+    r = await call('GET', '/api/products');
+    ok(r.json.products.every((p) => p.trend === undefined), 'buyer catalog has no trend data');
+    r = await call('GET', '/js/shop.js');
+    ok(/Reference only/.test(r.text) || /loadTrends/.test(r.text), 'shop.js has market trends panel');
+
     console.log('Static pages');
     for (const p of ['/', '/shop', '/account', '/admin', '/collection', '/radar', '/breaks', '/track/x', '/handoff/x']) {
       r = await call('GET', p);

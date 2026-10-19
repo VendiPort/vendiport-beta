@@ -11,6 +11,7 @@ const fs = require('fs');
 const path = require('path');
 const { randomUUID } = require('crypto');
 const { URL } = require('url');
+const TRENDS = require('./lib/trends');
 
 const ROOT = __dirname;
 const PUBLIC = path.join(ROOT, 'public');
@@ -566,6 +567,11 @@ async function handleApi(req, res, pathname) {
   if (X && (await X.handle(req, res, pathname))) return;
   if (ADMIN && (await ADMIN.handle(req, res, pathname))) return;
 
+  // GET /api/market-trends — store-side reference (static seed, not live data)
+  if (method === 'GET' && pathname === '/api/market-trends') {
+    return send(res, 200, TRENDS.publicTrends());
+  }
+
   // GET /api/health
   if (method === 'GET' && pathname === '/api/health') {
     return send(res, 200, { ok: true, brand: 'VendiPort', port: PORT, dataDir: DATA, payMode: stripeTestModeEnabled() ? 'stripe_test' : 'stub' });
@@ -593,7 +599,7 @@ async function handleApi(req, res, pathname) {
                 : null,
             }))
           : [];
-        return X.decorateProduct({
+        const decorated = X.decorateProduct({
           id: p.id,
           title: p.title,
           subtitle: p.subtitle,
@@ -611,6 +617,8 @@ async function handleApi(req, res, pathname) {
             : null,
           windows,
         }, p, shopScope ? 'shop' : 'buyer');
+        if (shopScope) decorated.trend = TRENDS.trendForProduct(decorated);
+        return decorated;
       });
     return send(res, 200, {
       products,

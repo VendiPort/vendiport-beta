@@ -106,3 +106,12 @@ There is no mandatory Yes/No seal question. At the door the buyer scans the tote
 **Factory-sealed product only.** Shops list and ship only factory-sealed product. Shop-built, repacked or mystery packs are not allowed (shown in shop onboarding terms and the packing step). Photo 0 is the proof that the product was still in its factory wrap before it was bagged. *Legal note: have a California attorney review this wording and any chase/"hit" marketing.*
 
 **Fair-price badge (demo).** Each SKU in `data/products.json` can carry a `msrp` (demo reference price — **not live market data**). `lib/util.js#priceVsMsrp` turns shop price vs MSRP into a badge: *At MSRP*, *Below MSRP −X%*, *Fair: within 15% of MSRP*, or *Above MSRP +X%* (amber above +15%, red above +25%). Shown on the buyer machine slot and checkout, with a tooltip "Demo reference price … not live market data". The shop inventory page shows a price-vs-MSRP column, and admin → Product health lists SKUs above +25% of MSRP. SKUs without an `msrp` show no badge ("n/a" in the shop list). Prices stay the shop's call; the badge is informational only.
+
+## Market trends (store-side, round 5)
+
+`data/market-trends.json` is a static seed of 13 sealed boxes (release price → current price, % change, sources), **as of Oct 19, 2026**, built from `box-price-trends.csv`. It is a *Market reference (asking-price based, Oct 2026), not live data*. Sports = MSRP vs median eBay asking prices (HobbyMonitor); Pokémon = first tracked vs current TCGplayer market (tcgrate).
+
+- `GET /api/market-trends` returns the list sorted by % change, each with a neutral suggestion (>50% "Hot", 0–50% mild, <0 "Cooling").
+- Shop page → **Market trends** tab: ▲/▼ arrows, release vs now, bar scale, All / Sports / Pokémon filters, footnote "Reference only. Set your own prices." (not financial advice).
+- Inventory rows whose title fuzzy-matches a trend product (all non-year tokens present, most specific wins; `lib/trends.js`) show a trend badge plus price vs current market. Different-year matches are flagged "newer edition". Only on `?scope=shop`; the buyer catalog never carries trend data.
+- Admin → Product health shows a read-only copy. Update by editing the JSON and redeploying.

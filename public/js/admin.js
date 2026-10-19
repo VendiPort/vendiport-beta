@@ -235,8 +235,13 @@ const VIEWS = {
     const MS = OV.product.msrp || { flagged: [], checked: 0 };
     const msrpCard = `<div class="card sec"><h2>Price vs MSRP flags</h2><p class="note">Flags any SKU priced more than +${MS.threshold || 25}% above its reference MSRP. Reference prices are demo values, not live market data.</p>
       ${MS.flagged.length ? table(['SKU', 'Price', 'Ref. MSRP', 'Over'], MS.flagged.map((f) => [esc(f.title) + (f.hidden ? ' <span class="muted">(hidden)</span>' : ''), usd(f.price), usd(f.msrp), '<span class="tag red">⚑ +' + Math.round(f.pct) + '%</span>'])) : '<p class="note">No SKUs above +25% of MSRP (' + MS.checked + ' checked).</p>'}</div>`;
+    let TR = null;
+    try { const r = await fetch('/api/market-trends'); TR = await r.json(); } catch (_) {}
+    const trendCard = TR && TR.items ? `<div class="card sec"><h2>Market trends (read-only)</h2><p class="note">${esc(TR.label)} · as of ${esc(TR.asOf)}. ${esc(TR.footnote)}</p>
+      ${table(['Product', 'Type', 'Release', 'Now', 'Change', 'Suggestion'], TR.items.map((i) => [esc(i.product), esc(i.category), usd(i.releasePrice), usd(i.currentPrice), i.pctChange > 0 ? '<span style="color:#3fcf6e">▲ +' + i.pctChange + '%</span>' : '<span style="color:#ff5a5a">▼ ' + i.pctChange + '%</span>', esc(i.suggestion.text)]), [2, 3, 4])}</div>` : '';
     v.innerHTML = `
       ${msrpCard}
+      ${trendCard}
       <div class="grid2">
         <div class="card sec"><h2>Funnel — Browse › Select › Checkout › Paid ${REAL}</h2>${fun(R.funnel)}<p class="note">Counts since the last reset; % is step-to-step.</p></div>
         <div class="card sec"><h2>Funnel ${DEMO}</h2>${fun(M.funnel)}</div>
