@@ -379,6 +379,7 @@ function saveOrder(updated) {
 function serveStatic(req, res, urlPath) {
   let rel = decodeURIComponent(urlPath.split('?')[0]);
   if (rel === '/' || rel === '') rel = '/index.html';
+  if (rel === '/start' || rel === '/start/') rel = '/start.html';
   if (rel === '/shop' || rel === '/shop/' || rel === '/shop/inventory' || rel === '/shop/inventory/') rel = '/shop.html';
   if (rel === '/member' || rel === '/member/' || rel === '/login' || rel === '/login/' || rel === '/join' || rel === '/join/' || rel === '/account' || rel === '/account/') rel = '/member.html';
   if (rel.startsWith('/handoff/')) rel = '/handoff.html';

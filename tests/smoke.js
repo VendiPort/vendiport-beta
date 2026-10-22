@@ -437,7 +437,9 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     ok(/loadHistory/.test(r.text) && /inventory-history/.test(r.text), 'shop.js has inventory history view');
 
     console.log('Static pages');
-    for (const p of ['/', '/shop', '/account', '/admin', '/collection', '/radar', '/breaks', '/track/x', '/handoff/x']) {
+    r = await call('GET', '/start');
+    ok(r.status === 200 && /I'm a collector/.test(r.text) && /href="\/shop.html"/.test(r.text) && /href="\/"/.test(r.text), 'start chooser has collector + shop buttons');
+    for (const p of ['/', '/start', '/shop', '/account', '/admin', '/collection', '/radar', '/breaks', '/track/x', '/handoff/x']) {
       r = await call('GET', p);
       ok(r.status === 200 && /<html/i.test(r.text), 'GET ' + p);
     }
